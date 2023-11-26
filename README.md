@@ -8,5 +8,8 @@ They represent my collective experience; the tricks, techniques, and syntaxes fo
 My Tome files are the closest thing I've found to an experience bar and talent tree in real life.
 
 The name calls to mind old handwritten leather bound volumes belonging to scholars, 18th century scientists, philosophers, and other madman. It evokes a bit of science, and fiction, and RPG. 
-( https://afunentp.blogspot.com/2022/05/tome-files-digital-equivalent-of-trusty.html )
+(https://afunentp.blogspot.com/2022/05/tome-files-digital-equivalent-of-trusty.html)
+
+# Queries and Scripts
+These are intended to be functional tools that are ready to run. Wherever possible these begin with a declaration section that can be treated like parameters, so the code needs minimal tweaking before it can actually be useful.
 
