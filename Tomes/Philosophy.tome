@@ -1,0 +1,163 @@
+
+---- FAULT TOLERANCE
+-- User interface 
+http://uxmag.com/articles/failing-gracefully   
+	- people who encounter frequent errors in computer systems will simply choose not to use the system or replace it with a better one.
+	- determine the main use case and optimize your design for it... Provide Safety Nets For Edge Cases
+	- Defining a main use case helps send a clear message about how you want users to interact with the application. Be sure to limit the secondary features that may distract from that main use case.	
+
+	
+-- conceptual description
+Fault tolerance is the property that enables a system to continue operating properly in the event of the failure of or faults within some of its components. If its operating quality decreases at all, the decrease is proportional to the severity of the failure, as compared to a naively designed system in which even a small failure can cause total breakdown. Fault tolerance is particularly sought after in high-availability or life-critical systems. The ability of maintaining functionality when portions of a system break down is referred to as graceful degradation.
+
+A fault-tolerant design enables a system to continue its intended operation, possibly at a reduced level, rather than failing completely, when some part of the system fails. The term is most commonly used to describe computer systems designed to continue more or less fully operational with, perhaps, a reduction in throughput or an increase in response time in the event of some partial failure. That is, the system as a whole is not stopped due to problems either in the hardware or the software. An example in another field is a motor vehicle designed so it will continue to be drivable if one of the tires is punctured, or a structure that is able to retain its integrity in the presence of damage due to causes such as fatigue, corrosion, manufacturing flaws, or impact.
+
+Within the scope of an individual system, fault tolerance can be achieved by anticipating exceptional conditions and building the system to cope with them, and, in general, aiming for self-stabilization so that the system converges towards an error-free state. However, if the consequences of a system failure are catastrophic, or the cost of making it sufficiently reliable is very high, a better solution may be to use some form of duplication. In any case, if the consequence of a system failure is so catastrophic, the system must be able to use reversion to fall back to a safe mode. This is similar to roll-back recovery but can be a human action if humans are present in the loop.
+
+A highly fault-tolerant system might continue at the same level of performance even though one or more components have failed. For example, a building with a backup electrical generator will provide the same voltage to wall outlets even if the grid power fails.
+
+A system that is designed to fail safe, or fail-secure, or fail gracefully, whether it functions at a reduced level or fails completely, does so in a way that protects people, property, or data from injury, damage, intrusion, or disclosure. In computers, a program might fail-safe by executing a graceful exit (as opposed to an uncontrolled crash) in order to prevent data corruption after experiencing an error. A similar distinction is made between "failing well" and "failing badly".
+
+Fail-deadly is the opposite strategy, which can be used in weapon systems that are designed to kill or injure targets even if part of the system is damaged or destroyed.
+
+A system that is designed to experience graceful degradation, or to fail soft (used in computing, similar to "fail safe") operates at a reduced level of performance after some component failures. For example, a building may operate lighting at reduced levels and elevators at reduced speeds if grid power fails, rather than either trapping people in the dark completely or continuing to operate at full power. In computing an example of graceful degradation is that if insufficient network bandwidth is available to stream an online video, a lower-resolution version might be streamed in place of the high-resolution version. Progressive enhancement is an example in computing, where web pages are available in a basic functional format for older, small-screen, or limited-capability web browsers, but in an enhanced version for browsers capable of handling additional technologies or that have a larger display available.
+
+In fault-tolerant computer systems, programs that are considered robust are designed to continue operation despite an error, exception, or invalid input, instead of crashing completely. Software brittleness is the opposite of robustness. Resilient networks continue to transmit data despite the failure of some links or nodes; resilient buildings and infrastructure are likewise expected to prevent complete failure in situations like earthquakes, floods, or collisions.
+
+A system with high failure transparency will alert users that a component failure has occurred, even if it continues to operate with full performance, so that failure can be repaired or imminent complete failure anticipated. Likewise, a fail-fast component is designed to report at the first point of failure, rather than allow downstream components to fail and generate reports then. This allows easier diagnosis of the underlying problem, and may prevent improper operation in a broken state.
+
+
+
+----
+Science, observation and prediction
+
+When we keep track of our observations, suprisingly intricate patterns emerge that can be generalized. This is called Science.
+We create theories to explain the patterns, these theories posit mechanisms, which are supposed to be the cause resulting in the patterns.
+We can use them to predict new observations, when these predictions become true we take it as evidence that the mechanism is likely an actual part of the real world.
+
+
+
+----
+Retroduction ( Reasoning back from Observation to Explanation )
+
+Abductive Logic:
+Surprising fact, C, is observed;
+	But if A were true, C would be a likely result,
+	Hence there is reason to suspect that A is true.
+
+Reasoning Deductively and Inductively from hypothesis A will infer other results that should be present if A is True, so the likelihood of A being true increases as other inferable results are observed. 
+
+The process of Retroduction is a recursive cycle
+Surprising fact C1, is observed.
+Open-ended exploration is used to create Set C 
+	{all observable facts taken as relevant to occurrence of C1}.
+Abductive Logic is used to generate a Hypothesis identifying Set A 
+	{all plausible but unknown factors with C1 as an inferable result}
+Known and proven factors of Set C are taken as B.
+Deductive Logic is used to generate Theories for the results of B + each item within Set A. 
+Inductive Logic and Practical Tests are used to compare those Theories with observable facts in Set C.
+
+The cycle Iterates with improved parameters for selecting Set C, Set A, & B.
+
+
+
+
+----
+Never forget;
+Advanced is a synonym for "Complicated"
+Efficient systems are ones where "small differences have large impacts"
+Automation is the act of frontloading time & effort with the expectation 
+	that making systems more advanced and efficient will pay off over time.
+
+	
+Automation does not save time, it saves repetition. 
+By delegating the burden of that time, effort, and responsibility to 
+non-production personnel and resources, overall productivity is increased.
+ ( Preventative Maintenance vs. Production Breakdowns )
+
+ 
+----
+Root Cause analysis:
+If you can't control it (turn it off and on) with preventative action, then you have found the root cause.
+
+ 
+ 
+----
+DuctileIT design
+
+Every Cell should be:
+	Modular
+	Self-Sufficient and Redundant
+	Error-Mitigating
+	Informative
+	Resilient
+	Self-Resetting
+
+
+	Modular 		 = Has a clear and specific purpose that it accomplishes, and does it well. Another cell needing that function performed can provide properly formatted input, and correct and consistent output will be generated.
+	Self-Sufficient  = All dependencies are local. If a function is core to a cell performing it's clear and specific purpose, then that function must be brought into the cell, even if this creates duplication and version management overhead.
+	  and Redundant  = External resources may provide advantages that makes them the preferred option. Self-Sufficient local resources must still exist as part of a fallback strategy.
+	Error-Mitigating = Control and de-escalate errors. Respond and output in a way that respects the next module.
+	Informative		 = Comprehensive Logging, especially for failures. Notify. Redundant output; don't rely on smtp alone, when creating files for a remote location generate locally and then move.
+	Resilient		 = Returning to a ready-state should be the goal of every process, subroutine, condition, or state.
+	Self-Resetting	 = "Turn it off and Turn it back on" should be a valid troubleshooting technique. Each cell should initialize a clean & self-sufficient environment as part of startup.
+	
+	
+----
+
+"That's a good thing, but it's only a good thing if it's done in a way that's manageable" - Michael Broderick
+
+----
+
+The road is not paved, it has to be discovered.
+
+
+----
+
+Cognitive Walkthrough
+
+A cognitive walkthrough starts with a task analysis that specifies the sequence of steps or actions required by a user to accomplish a task, and the system responses to those actions. The designers and developers of the software then walk through the steps as a group, asking themselves a set of questions at each step. Data is gathered during the walkthrough, and afterwards a report of potential issues is compiled. Finally the software is redesigned to address the issues identified. 
+
+The effectiveness of methods such as cognitive walkthroughs is hard to measure in applied settings, as there is very limited opportunity for controlled experiments while developing software. The consensus in the usability community is that the cognitive walkthrough method works well in a variety of settings and applications. 
+
+Walking through the tasks[edit]
+
+After the task analysis has been made the participants perform the walkthrough by asking themselves a set of questions for each subtask. Typically four questions are asked:[1] 
+Will the user try to achieve the effect that the subtask has? 						E.g. Does the user understand that this subtask is needed to reach the user's goal?
+Will the user notice that the correct action is available? 							E.g. is the button visible?
+Will the user understand that the wanted subtask can be achieved by the action? 	E.g. the right button is visible but the user does not understand the text and will therefore not click on it.
+Does the user get appropriate feedback? 											Will the user know that they have done the right thing after performing the action?
+
+By answering the questions for each subtask usability problems will be noticed. 
+
+----
+
+Assertive communication is problem-solving in nature. 
+You remain calm, cool, & collected. (Neither passive, or aggressive.)
+Your answer, intentions, and body language are in harmony.
+
+
+----
+People work to validate their existing beliefs, and must be strongly motivated to invalidate an existing belief. Proof and data are not sufficient motivators.
+	unconcious mechanisms
+	Selective Interpretation - filtering new data through a lens of current belief
+	Belief Bias - Reluctance to surrender a belief is rooted in the feeling that the beliefs we have are natural and logical, because they result from our own experiences. 
+					People generally do not see themselves as accountable for the beliefs they have
+	Change Readiness - The best indicator of future behavior is past behavior, so the best indicator of adaptability is a history of adapting.
+	
+
+
+----
+- Andrea Goulet
+
+"'Legacy Code' is code that doesn't have communication artifacts that let you discern the rational or intention behind it."
+
+"It becomes legacy code once it has a long feedback loop, meaning as soon as the documentation is not readily available"
+
+"What am I going to need in 6 months to be able to context switch back to what I understand now? Whatever is needed then has to be provided now."
+
+"regarding dependencies:
+Chaos theory teaches us that you can't build a repeatable process around legacy code. The more dependencies that you have in a system, the less likely you are to be able to accurately estimate the outcome."
+
+
+

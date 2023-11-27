@@ -1,0 +1,1105 @@
+Powershell Tome
+
+
+--
+Powershell Best Practices & Style Guide
+https://github.com/PoshCode/PowerShellPracticeAndStyle#table-of-contents
+
+
+====================================
+= Language Elements -
+====================================
+
+--
+# single line Comment
+
+<# Multi
+	Line
+	Comments #>
+
+
+======================================
+= Comparisons, Operators, $true & $false
+======================================
+
+"why does PowerShell use weird operators?" "Because it is a shell that allows scripting. The 'normal' operators already have semantic meaning in the shell context."
+
+ -eq	equals
+ -ne	not equal
+ -lt	less than
+ -le 	less than or equal
+ -gt	greater than
+ -ge	greater than or equal
+
+
+----
+# Use -like for standard wildcard 
+
+$example = "Forty-Two"
+$example -like "Forty-T*"
+
+----
+# Using -match for a Regex  =  http://www.computerperformance.co.uk/powershell/powershell_conditional_operators.htm#Example_1_-Match
+
+$example = "Forty-Two"
+$example -match "Tw?"
+
+$match = "0000/0000A - 2070"
+$match -match '[0-9][0-9][0-9][0-9]/[0-9][0-9][0-9][0-9][A-Z] - 20[0-9][0-9]'
+
+
+
+--
+# Case (in)sensitive operators.
+## operators that allow toggling case sensitivity do so with an indicator letter immediately afterthe hyphen
+
+Example:
+-ceq is the case sensative equals operator
+
+
+--
+# Case (in)sensitive methods.
+## To make these methods make case-insensitive add ,1 after the text. 
+## This character is an ignorecase switch (Boolean), so 1 means is case-insensitive is ON
+
+
+$text.StartsWith("MiXeD CaSe",1)
+
+
+--
+$true & $false
+
+never compare a Bolean to text - $true -eq "false" will evaluate as true
+always use:
+$comparison -eq $true
+
+--
+Logical Operators
+ -not
+ !
+ -and
+ -or 
+ 
+--
+Logical comparison patterns
+- remember to double bracket!
+
+ ----
+  # always true
+  if (42 -eq 42) {"Everything is true"}
+
+ ----
+  # the opposite of always true
+  if (-not (42 -eq 42)) {"Nothing is true"}
+
+  ## the ! negation indicator
+  if (! (42 -eq 42)) {"Nothing is true"}
+
+ ----
+  # either condition is true
+  if ((42 -eq 42) -or (41 -eq 42)) {"Everything is true"}
+
+ ----
+  # both conditions are true
+  if ((42 -eq 42) -and (41 -lt 42)) {"Everything is true"}
+
+
+
+======================================
+= Functional Flow (ForEach, Switch, etc.)
+======================================
+
+--
+ForEach tips and tricks
+http://www.madwithpowershell.com/2014/03/stuff-you-didnt-know-about-foreach-in.html
+ 
+
+
+--
+#Switch () {}
+
+https://technet.microsoft.com/en-us/library/ff730937.aspx
+
+switch ($a) 
+    { 
+        1 {"The color is red."} 
+        2 {"The color is blue."} 
+        default {"The color could not be determined."}
+    }
+
+
+switch -wildcard ($a) 
+    { 
+        "a*" {"The color is red."} 
+        "b*" {"The color is blue."} 
+    }
+
+switch -regex ($a) 
+    { 
+        "[a-d]" {"The color is red."} 
+        "[e-g]" {"The color is blue."} 
+    } 
+
+
+--
+
+
+
+
+======================================
+= Special variables
+======================================
+
+$_ 		contains current pipeline object
+
+$Args 	array of parameters passed to a function
+
+$Error 	objects for which an error occurred
+
+$home	user's home directory
+
+$psHome directory of PowerShell installation
+
+
+
+
+======================================
+= External Processes and Applications 
+======================================
+
+--
+# Call External Commands with arguements or switches
+## you are going to want to separate your arguments into separate parameter
+
+$msbuild = "C:\WINDOWS\Microsoft.NET\Framework\v3.5\MSBuild.exe"
+$args = "/v:q /nologo"
+start-process $msbuild $args 
+
+
+# I've found that invoking cmd works well as an alternative, especially when you need to pipe the output from the called application (definitely us this for applications that do not have built in logging)
+
+cmd /C "$msbuild $args" >> $outputfile
+
+
+
+--
+External Process Management
+blogs.msdn.com/b/powershell/archive/2007/01/16/managing-processes-in-powershell.aspx
+
+
+
+======================================
+= Executing PowerShell scripts (on demand and on schedule)
+======================================
+
+--
+Calling powershell from an external command [Blogged]
+
+powershell.exe -noprofile -executionpolicy bypass -command "c:\script\script.ps1"
+
+(-noprofile and -executionpolicy bypass or -executionpolicy Remotesigned are good for creating a one-time session)
+
+
+Scheduled task (with parameters)
+Action:  powershell.exe
+Arguements: -executionpolicy bypass -command "\\site7fs1\SoftwareLibrary\CodeLibrary\ScheduledTasks\Create-MBEEreport.ps1 -yesterday"
+
+
+--
+"Unblocking" files on UNC shares
+If the share is not in the Intranet zone then no matter how many times you run unblock-file it won't work
+
+
+
+
+======================================
+= Credential Usage
+======================================
+
+--
+Saving Credentials in PowerShell
+
+The first step for storing a password on disk is usually a manual one. Given a credential that you’ve stored in the $credential variable, you can safely export its password to password.txt using the following command:
+
+$credential.Password | ConvertFrom-SecureString | Set-Content c:\temp\password.txt
+
+
+
+--
+Recreate the credential from the password stored on disk
+In the script that you want to run automatically, add the following commands:
+
+
+$password = Get-Content c:\temp\password.txt | ConvertTo-SecureString
+$credential = New-Object System.Management.Automation.PsCredential “CachedUser“,$password
+
+These commands create a new credential object (for the CachedUser user) and store that object in the $credential variable.
+
+http://www.leeholmes.com/blog/2008/06/04/importing-and-exporting-credentials-in-powershell/
+
+
+
+
+======================================
+= Date and Time
+======================================
+
+--
+# Get-Date  ( format & uformat )
+https://technet.microsoft.com/en-us/library/ee692801.aspx
+
+get-date -format s    [  SortableDateTimePattern (based on ISO 8601) using local time ]    result: 2007-08-30T11:20:36  
+ 
+
+----
+# Millisecond accurate comparisons (specifically for SQL)
+get-date $bookmarktimestamp -Format "yyyy/MM/dd HH:mm:ss.fff"
+
+
+----
+# NTFS friendly string for including time in a filename
+
+$archiveName = "site7scrap-" + (get-date -Format HH-mm-ss) + ".csv"
+
+----
+# NTFS friendly string for including Date in a filename (folder creation in this example)
+
+$archiveDate = (get-date -Format MM-dd-yyyy).ToString()
+New-Item -Name $archiveDate -Path $ArchivePath -ItemType Directory -ErrorAction SilentlyContinue
+
+
+----
+# NTFS friendly string containing both Date and Time in a filename
+
+$LogDate = (get-date -Format MM-dd-yyyy).ToString()
+$LogTime = (get-date -Format HH-mm-ss).ToString()
+$LogFileName = "Update Historical $LogDate $LogTime.html"
+$LogFilePath = Join-Path $LogFolder -ChildPath $LogFileName
+
+
+----
+# URL friendly DateTime format  (it does make jquery date picker go a bit weird though)
+
+$yesterday = get-date "10/22/2017 23:00" -Format s
+
+$url = "http://sitereporting.redacted.int/Reports/BIDashboardMBEE.cshtml?rqBeginDate=$yesterday&rqEndDate=10/23/2017 23:00"
+[System.Web.HttpUtility]::Htmlencode($url)
+
+
+
+----
+# Day of week and Day of year
+
+$dayofweekINT = (get-date).DayOfWeek
+
+$dayofyearINT = (get-date).DayOfYear
+
+
+----
+# One Week Ago
+
+$OneWeekAgoBeginDateTime = (get-date -hour 23 -Minute 0 -Second 0 -Millisecond 0) - (New-TimeSpan -Days ($dayofweekINT + 7))
+$OneWeekAgoEndDateTime   = (get-date -hour 22 -Minute 59 -Second 59 -Millisecond 59) - (New-TimeSpan -Days $dayofweekINT)
+
+
+----
+# Week To Date
+$wtdBeginDateTime = (get-date -hour 23 -Minute 0 -Second 0 -Millisecond 0) - (New-TimeSpan -Days ($dayofweekINT))
+
+
+----
+# Month To Date
+$firstOfMonth = get-date -Day 1 -Hour 0 -Minute 0 -Second 0 -Millisecond 0
+
+ 
+--
+Get-Date  ( from a string, or multiple values )
+
+$dev = Get-Date
+Date         : 11/19/2016
+Time         : 9:55:12
+
+
+$devdate = $dev.Date
+$devtime = $dev.Time
+get-date -Date "$devdate $devtime"
+
+Saturday, November 19, 2016 9:55:12 AM
+
+
+
+--
+#Turn Julian value into a Date value
+
+$LotDate = get-date ((get-date -Day 1 -Month 1 -Year $LotYear) + (New-TimeSpan -days $o.JulianDate)) -Format d
+
+
+----
+#Optional code to make allowance for processing that may be run in January, but is actually for December events
+
+if($o.JulianDate -gt 30 -and (get-date $o.lastmodifieddate).Month -eq 1) 
+   { $pourLotYear = (get-date $o.lastmodifieddate).Year - 1 }
+Else { $pourLotYear = (get-date $o.lastmodifieddate).Year }
+$pourdate = get-date ((get-date -Day 1 -Month 1 -Year $pourLotYear) + (New-TimeSpan -days $o.JulianDate)) -Format d
+
+
+
+
+======================================
+= Working With arrays
+======================================
+
+--
+#Adding a new element to an existing array
+$a += 12
+
+# Searching for a specific value in an array 
+	“Use the -contains operator”
+$a -contains 12
+
+Sorting an array
+$a = $a | sort
+
+
+
+http://www.techotopia.com/index.php/Working_with_Arrays_in_Windows_PowerShell_1.0#Adding_new_Elements_to_a_Windows_PowerShell_Array
+
+http://blogs.technet.com/b/heyscriptingguy/archive/2011/12/06/add-modify-verify-and-sort-your-powershell-array.aspx
+
+
+
+
+======================================
+= Excel
+======================================
+
+--
+# Excel - get url value from inserted hyperlink: (This is to resolve a very specific issue where a user has made a bunch of "quick hyperlinks" that now need to be changed.)
+
+
+$RepURL = ($ExcelWorksheet.Cells.Item($StartRow,2).Hyperlinks | select -First 1).TextToDisplay 
+
+
+# more hyperlink info:
+
+$excel = New-Object -comobject Excel.Application
+$excel.Visible = $True
+$workbook = $excel.Workbooks.Add()
+$workbook.Worksheets.Item(1).Hyperlinks  |  get-member
+
+
+
+
+
+======================================
+= "Open File" dialog box
+======================================
+
+##
+Get-FileNameFunction.ps1
+Function Get-FileName($initialDirectory)
+{  
+ [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") |
+ Out-Null
+
+ $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+ $OpenFileDialog.initialDirectory = $initialDirectory
+ $OpenFileDialog.filter = "All files (*.*)| *.*"
+ $OpenFileDialog.ShowDialog() | Out-Null
+ $OpenFileDialog.filename
+ $OpenFileDialog.ShowHelp = $true
+ # these scripts run best in Single-Threaded Apartment mode i.e powershell -sta <your script>
+} #end function Get-FileName
+
+# *** Entry Point to Script ***
+
+Get-FileName -initialDirectory "c:\fso"
+##
+
+http://blogs.technet.com/b/heyscriptingguy/archive/2009/09/01/hey-scripting-guy-september-1.aspx
+
+
+ 
+======================================
+= Parameters
+======================================
+ 
+---- How To Validate Parameters in PowerShell
+https://mcpmag.com/articles/2015/04/23/validate-parameters-in-powershell.aspx
+https://msdn.microsoft.com/powershell/reference/5.1/Microsoft.PowerShell.Core/about/about_Functions_Advanced_Parameters
+
+the CmdletBinding[] keyword gives the script the ability to use advanced parameter validation. 
+
+Using parameter validation enables you to add multiple validation routines, PowerShell provides eight different restrictive validation attributes. 
+•ValidateNotNull 
+•ValidateNotNullOrEmpty 
+•ValidateLength 
+•ValidateCount 
+•ValidateRange 
+•ValidateSet 
+•ValidatePattern 
+•ValidateScript
+
+
+
+--
+# example: my own production example
+
+[CmdletBinding(SupportsShouldProcess = $false)]
+Param(
+    [ValidateScript({Test-Path $_})] 
+        [string]$resultFile,
+
+    [ValidateScript({Test-Path $_ -PathType 'Container'})] 
+        [string]$failedTransfers,
+
+#    [ValidateScript({Test-Path $_})] ## dude! don't be silly. Just test the directory not the individual log files. Otherwise the log files won't auto generate.
+        [string]$failuresLog,
+
+    [string]$successLog
+    )
+
+--
+# example: https://blogs.technet.microsoft.com/heyscriptingguy/2011/05/15/simplify-your-powershell-script-with-parameter-validation/
+
+Function Foo 
+{ 
+    Param( 
+        [ValidateSet("Tom","Dick","Jane")] 
+			[String] $Name, 
+        [ValidateRange(21,65)] 
+			[Int] $Age, 
+        [ValidateScript({Test-Path $_ -PathType 'Container'})] 
+			[string] $Path 
+    ) 
+...
+}
+
+
+
+
+
+======================================
+= Printers
+======================================
+ 
+--
+#Check for unhealthy printer Queues
+
+$arrayComp ="Server1"
+foreach ($machine in $arrayComp)
+{ 
+get-WmiObject -class win32_printer -computername $machine |`
+where-object {$_.status -notmatch "Unknown" -and $_.status -notmatch "Ok"} | sort name |
+ ft name, systemName, shareName, status, location
+}
+
+
+--
+#Create printer
+
+http://poshcode.org/?diff=3511
+
+
+
+======================================
+= Send-Email
+======================================
+
+--
+#Send-Email
+
+$smtpServer = "smtp.example.com"
+$subject = "My subject"
+
+$body = "This is a growing text array. Use `n to create a new line."
+$body += " You can even do this to increase readability of code"
+$body += "`n"
+$body += "Bye"
+
+$emailto = "address1@whatever.com", "address2@whereever.com"
+
+Send-MailMessage -To $emailTo -From $emailFrom -Subject $subject -Body $body -SmtpServer $smtpServer
+
+
+
+--
+#Send an email through authenticated connection
+
+Function Send-AuthEMail {
+    Param (
+        [Parameter(`
+            Mandatory=$true)]
+        [String]$EmailTo,
+        [Parameter(`
+            Mandatory=$true)]
+        [String]$Subject,
+        [Parameter(`
+            Mandatory=$true)]
+        [String]$Body,
+        [Parameter(`
+            Mandatory=$true)]
+        [String]$EmailFrom="myself@gmail.com",  #This gives a default value to the $EmailFrom command
+        [Parameter(`
+            mandatory=$false)]
+        [String]$attachment,
+        [Parameter(`
+            mandatory=$true)]
+        [String]$Password
+    )
+
+        $SMTPServer = "smtp.gmail.com" 
+        $SMTPMessage = New-Object System.Net.Mail.MailMessage($EmailFrom,$EmailTo,$Subject,$Body)
+        if ($attachment -ne $null) {
+            $SMTPattachment = New-Object System.Net.Mail.Attachment($attachment)
+            $SMTPMessage.Attachments.Add($STMPattachment)
+        }
+        $SMTPClient = New-Object Net.Mail.SmtpClient($SmtpServer, 587) 
+        $SMTPClient.EnableSsl = $true 
+        $SMTPClient.Credentials = New-Object System.Net.NetworkCredential($EmailFrom.Split("@")[0], $Password); 
+        $SMTPClient.Send($SMTPMessage)
+        Remove-Variable -Name SMTPClient
+        Remove-Variable -Name Password
+} #End Function Send-AuthEMail
+
+
+
+
+======================================
+= ConvertTo-Html
+======================================
+
+	
+--
+Using HtmlDecode to embed HTML code (like href links) within a table that will be part of a convert-tohtml 
+https://stackoverflow.com/questions/27652761/convert-a-list-of-urls-into-clickable-html-links-using-convertto-html
+	
+Function MyFunction{
+    clear-host
+    $hash = @{"Google.com" = "www.google.com"; "Yahoo" = "www.yahoo.com";"My Directory" ="C:\Users\Public\Favorites" ;"MSN" = "www.msn.com"}
+    $hash.GetEnumerator() | sort -Property Name | Select-Object Name, Value | 
+        ConvertTo-Html -Property *,@{Label="Link";Expression={"<a href='$($_.Value)'>$($_.Name)</a>"}}
+	}
+
+$html = MyFunction 
+
+Add-Type -AssemblyName System.Web
+[System.Web.HttpUtility]::HtmlDecode($html) | Out-File 'U:\Burn After Reading\temp.html'
+
+
+--
+
+
+Get-ChildItem "C:\*.htm" -Recurse -Force |
+  ConvertTo-Html -Fragment FullName, Name, LastWriteTime -PreContent '<html><head><title>Test</title></head><body>' -PostContent '</body></html>' |
+  % { $_ -replace '<th>.*</th>','<th>Files</th>' -replace '<td>(.*?)</td><td>(.*?)</td><td>(.*?)</td>', '<td><a href="$1">$2</a> $3</td>'  } | Set-Content "C:\$env:COMPUTERNAME-$(Get-Date -f dd-MM-yyyy).htm"
+
+
+  
+
+
+======================================
+= Strings, text files, and output
+======================================
+
+
+---- reading and writing to a file
+
+$source = Get-Content -Path 'C:\Users\afunck\Documents\dev\regex testing.txt' 
+$source -replace "UserIDSource`=\d+", "UserIDSource`=1" | Out-File 'C:\Users\afunck\Documents\dev\regex testing.txt' 	
+	
+	
+
+---- writing a new line 
+
+You can use the Environment class's static NewLine property to get the proper newline:
+
+"a" + ([Environment]::NewLine) + "b"
+
+--
+Use the `n character, for example:
+
+PS C:\> "string with new line `n in it"
+
+string with new line
+
+ in it
+
+Note If you need a carriage return, use `r. For a carriage return and a new line, use `r`n.
+
+
+
+--
+Stings and Substrings
+
+.Substring(position,characters)
+
+To pull a string from a file name:
+($2070csv.BaseName.ToString()).Substring(1,3)
+
+
+
+----
+Import-csv
+(using "`t"  to represent tab delimited)
+
+Import-Csv .\data06232016.txt -Delimiter "`t" -Header "Date","Time","DateCode","Std","LineID","PatternID","Low","High","Actual","Result"
+
+
+
+
+======================================
+=  Log files
+======================================
+
+--
+Start-Transcript -Path $mypath
+Stop-Transcript
+
+
+--
+dynamically log into the location of the script
+
+$ScriptPath = get-location
+
+$LogFolderName = "ErrorLogs\"
+$LogFolder = Join-Path -path $ScriptPath -ChildPath $LogFolderName
+
+
+
+
+----
+full end-to-end management of log files:	
+
+
+	$BaseFolderName = "D:\DataSync\"
+	$LogFolderName = "logs\"
+	$LogFolder = Join-Path -path $BaseFolderName -ChildPath $LogFolderName
+
+	## if the path doesn't exist, then create it
+	if ( (test-path $LogFolder) -eq $false) 
+		{ 
+		New-Item -name $LogFolderName -Path $BaseFolderName -ItemType Directory -ErrorAction SilentlyContinue
+		}
+
+	$LogDate = (get-date -Format MM-dd-yyyy).ToString()
+	$LogTime = (get-date -Format HH-mm-ss).ToString()
+	$LogFileName = "Update Historical $LogDate $LogTime.html"
+	$LogFilePath = Join-Path $LogFolder -ChildPath $LogFileName
+
+
+	Function Clean-logs {
+		###########################################################################
+		# remove log files older than $LogFileAge
+		#
+
+		$LogFileAge = 7
+
+		$outdatedFiles = Get-ChildItem $LogFolder -Filter *.html | Where LastWriteTime -lt  (Get-Date).AddDays(-1 * $LogFileAge)  
+
+		foreach($outdatedFile in $outdatedFiles)
+			{  
+			Remove-Item –path $outdatedFile.FullName
+			}  
+	}
+
+
+	Function Report-SyncLog {
+		###########################################################################
+		# Prepare and save report out
+		#
+
+		$HTML = @{
+			Head = "SyncProdToTest-HighChangeRate output stream"
+			Body = "
+					Reference Dates: $beginDatetime through $endDatetime </br>
+						$OutputStreamHtml
+				   "
+
+			}
+
+		$report = ConvertTo-Html @HTML -Title $reportTitle -PostContent "<p> timestamp $(Get-Date) </p>"
+
+		$report | Out-File $LogFilePath
+		
+	}
+
+
+	$OutPutStreamHtml = @()
+
+	Update-AT_ObjHistoryLog -Verbose -ErrorVariable ErrorSteamVar  -OutVariable OutputStreamVar
+		$OutPutStreamHtml += "<H2> OutputStream </H2></br> <UL>"
+		$OutPutStreamHtml +=  ForEach ($item in $OutputStreamVar) { "<li> $item </li>"}
+		$OutPutStreamHtml += " </UL>"
+
+		
+	# Set $DebugMode = $true to force an output log even if no error flags have occurred
+	$DebugMode = $true
+
+	if ( $errorCount -gt 0 )
+		{ $ErrorReportFlag = $true }
+
+	if ($ErrorReportFlag -or $DebugMode) 
+		{ Report-SyncLog }
+
+
+	Clean-logs
+
+
+
+
+
+======================================
+=  File and Folder  
+======================================
+	-- examples are Docuware Specific, but the logic is general --	
+	
+# move folders		 
+$folders = Get-childItem \\sitefs01\Docuware\DuctileStorage\Recievers\Recievers2\073
+Foreach ($folder in $folders)
+	{
+        Write-Host $folder
+        Move-Item -Path $folder.FullName -Destination \\sitefs01\Docuware\DuctileStorage\Recievers\Recievers2011
+
+	}
+
+--
+
+# rename folders
+$folders = Get-childItem \\sitefs01\Docuware\DuctileStorage\Recievers\Recievers2011
+Foreach ($folder in $folders)
+	{
+    $rename = $folder.Name.TrimStart('0')
+    Rename-Item $folder.FullName -NewName $rename
+	}
+
+
+--
+
+# rename files (selected by the folder they are in)
+
+$folders = Get-childItem \\sitefs01\Docuware\DuctileStorage\Recievers\Recievers2011
+Foreach ($folder in $folders)
+	{
+        Write-Host $folder
+
+        $dwTiffFiles = Get-childItem $folder.FullName -recurse -File -Include '*.dwtiff' 
+        Foreach ($file in $dwTiffFiles)
+	        {
+            $rename = $file.BaseName + '.Tiff'
+            Rename-Item $file.FullName -NewName $rename
+
+            Write-Host $file
+	        }
+	}	
+	
+
+--
+
+# Rename files based on file list
+
+
+$files = Get-ChildItem -Filter "*_dd"
+
+Foreach ($file in $files)
+	{
+	$rename = $file.BaseName + '.hh'
+	Rename-Item $file.FullName -NewName $rename
+
+	Write-Host $file
+	}
+
+
+
+
+======================================
+= Computer/Server interactions
+======================================
+
+
+--
+# test-path for a remote share
+
+Test-Path $('filesystem::\\Server\share$\install.wim')
+
+
+
+--
+# List installed windows updates
+
+Get-WMIobject -Class "win32_quickfixengineering"  | sort InstalledOn
+
+
+
+--
+# List the user & group permissions of a shared location
+(get-acl "\\Acpfs1\departments\PUBLIC\Core Room - Mold\Production shift notes\").Access
+
+
+
+--
+# Pin and unpin applications from the taskbar and Start-menu
+https://gallery.technet.microsoft.com/ScriptCenter/b66434f1-4b3f-4a94-8dc3-e406eb30b750/
+	Use PowerShell to unpin Taskbar shortcut depending on shortcut Target Path
+	https://stackoverflow.com/questions/25041205/use-powershell-to-unpin-taskbar-shortcut-depending-on-shortcut-target-path
+	
+
+
+--
+# Identify Powershell Version
+$PSVersionTable.PSVersion
+
+
+
+--
+# Stop & Disable a service
+
+Get-Service -ComputerName acpplc1 aelookupsvc -force| Stop-Service -PassThru | Set-Service -StartupType disabled
+
+
+
+--
+# get Computer uptime marker (will show the lastboot time if there no hibernates have occurred)
+
+#CIM
+Get-CimInstance -ClassName win32_operatingsystem | Select-Object csname, lastbootuptime
+
+#WMI
+Get-wmiobject -ComputerName acpplc1 -ClassName win32_operatingsystem -Credential $cred | Select-Object csname, @{LABEL='LastBootUpTime';EXPRESSION={$_.ConverttoDateTime($_.lastbootuptime)}}
+
+
+
+--
+Enable and Use remoting
+
+https://technet.microsoft.com/en-us/magazine/ff700227.aspx
+
+The WinRM service is configured for manual startup by default. You must change the startup type to Automatic and start the service on each computer you want to work with. At the PowerShell prompt, you can verify that the WinRM service is running using the following command:
+get-service winrm
+
+
+To configure Windows PowerShell for remoting
+Enable-PSRemoting –force
+
+winrm quickconfig
+This command analyzes and configures the WinRM service. 
+
+
+
+--
+Exchange 2010
+
+add-pssnapin Microsoft.Exchange.Management.PowerShell.E2010
+
+Remove-DistributionGroupMember -Identity 'redacted.net/Sites/AMER/Redacted_Plants/PlantA/Groups/Site/DL-AM-SiteE-OEE' -Member 'redacted.net/Sites/AMER/Hitachi_Metals/Redacted_Plants/PlantB/Users/Funck, Adam'
+
+
+
+----
+Using netstat to check port communication log
+( Note: this is a standard  windows tool, so it's not PowerShell specific)
+
+
+PS H:\> netstat -ano | findstr 587
+  TCP    999.999.111.15:60528    999.999.102.103:587     TIME_WAIT       0
+  TCP    999.999.111.15:60529    999.999.102.103:587     TIME_WAIT       0
+  TCP    999.999.111.15:60530    999.999.102.103:587     TIME_WAIT       0
+  TCP    999.999.111.15:60531    999.999.102.103:587     ESTABLISHED     6368
+  UDP    127.0.0.1:63587         *:*                                     4252
+  
+ 
+----
+Configuring windows firewall
+( Note: this is a standard  windows tool )
+
+-- show
+netsh advfirewall show all
+
+-- turn off
+netsh advfirewall set allprofiles state off
+
+-- turn on
+netsh advfirewall set allprofiles state on
+
+
+
+
+======================================
+= Registry
+======================================
+
+--
+# Explore registry path:
+
+Get-ChildItem HKLM:\system\CurrentControlSet\Control\Lsa\
+
+Get-Itemproperty HKLM:\system\CurrentControlSet\Control\Lsa\
+
+
+--
+# Get & Set a registry property
+
+	Get-Itemproperty HKLM:\system\CurrentControlSet\Control\Lsa\ -Name lmcompatibilitylevel
+
+	Set-Itemproperty HKLM:\system\CurrentControlSet\Control\Lsa\ -Name lmcompatibilitylevel -Value 3
+
+
+
+--
+# .net framework version & using -recurse in registry
+
+	If you're going to use the registry you have to recurse in order to get the full version for the 4.0 Framework. The earlier answers both return the root number .NET 3.0 (where the WCF and WPF numbers, which are nested under 3.0, are higher)
+	It also outputs both Client and Full on 4.0 (if you have them both installed):
+
+	Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP' -recurse |
+		Get-ItemProperty -name Version -EA 0 |
+		Where { $_.PSChildName -match '^(?!S)\p{L}'} |
+		Select PSChildName, Version
+
+
+
+
+
+======================================
+= AD CMDlets
+======================================
+
+--
+Get-ADComputer -filter {name -like '*dc*'}
+
+----
+Adding a GroupMember from another domain
+ 
+$baseuser = get-aduser -Server redacted.int afunck
+
+$DLgroup = Get-ADGroup ACP_DL_FS_AccountingModify
+
+$DLgroup | Add-ADGroupMember -Members $baseuser
+
+
+--
+Standardizing phone number
+
+ $People = get-qaduser | where lastname -gt "" | where phonenumber -Notlike '*,,*'
+ 
+ Foreach ($person in $people) 
+ {
+ if ($person.phonenumber -in 1..999)
+ {
+ $num = $person.PhoneNumber
+ $person.PhoneNumber
+ $newnum = "5705555555,,$num"
+ 
+ Get-QADUser $person | Set-QADUser -PhoneNumber $newnum
+  } 
+}
+ 
+ 
+ --
+ get-aduser -Filter * -Server SiteE.local -Properties scriptpath | where {$_.scriptpath -ne $null } |  Export-Clixml -Path C:\Users\afunck\Desktop\SiteE-users-with-scriptpath.xml
+ 
+ 
+ 
+ 
+ 
+ 
+======================================
+= DataTypes
+======================================
+ 
+ 
+--
+ Leading zeroes
+ 
+ ----
+ to add 
+	([string]$number).PadLeft(4,'0')
+
+	Examples:
+	(Get-Date $LabelTimestamp).DayOfYear.ToString().PadLeft(3,'0')
+	
+	result = day of year that is consistently 3 digits - https://4sysops.com/archives/how-to-add-leading-and-ending-zeroes-to-strings-in-powershell/
+	
+
+
+
+------ or 
+	format ( -f ) with "{0:d4}"  ( where 4 represents the number of characters you want to pad to )  or with "{0:0000}"  (same result, may be a bit more readable in certain circumstances )
+ 
+	Examples:
+	PS C:\> “{0:d4}” -f 45
+	0045
+	PS C:\> “{0:d4}” -f 450
+	0450
+	PS C:\> “{0:d4}” -f 4567
+	4567
+ 
+ 
+ ----
+ to remove
+ $folder.Name.TrimStart('0')
+ 
+ Example:
+ 
+$folders = Get-childItem \\Acpfs01\docuware\NewFormat\AccountsPayable\2014
+Foreach ($folder in $folders)
+	{
+    $rename = $folder.Name.TrimStart('0')
+    Rename-Item $folder.FullName -NewName $rename
+	}
+
+
+	
+
+	
+ ----
+ Converting a string to an Integer
+ [int]$intNum = [convert]::ToInt32($strNum, 10)
+ 
+  Simply casting the string as an [int] won't work reliably. You need to use the .NET convert class and its ToInt32 method. The method requires a string ($strNum) as the main input, and the base number (10) to convert to. 
+   (This is because you can not only convert to the decimal system (the 10 base number), but also to, for example, the binary system (base 2).)
+
+   
+  --
+  Strings that represent decimal values need another step. Either splitting to string to extract the whole number value or converting to a decimal then rounding and converting that result to an int.
+
+     -- Using Split -- special note! -split doesn't seem to like "." as a delimeter, but using the .Split(".")[0] handles a period delimeter without issue.
+	$strNum = "1.500"
+	$splitStrNum = $strNum.Split(".")[0]
+    [int]$intNum = [convert]::ToInt32($splitStrNum, 10)
+ 
+	
+
+ ----
+Rounding a decimal 
+[math]::Round($a)  - Use the Round static method from the System.Math class. 
+
+-- By default, it rounds to whole numbers, unless a decimal place number is specified.
+PS C:\> $a = 111.2226
+PS C:\> [math]::Round($a)
+111
+
+PS C:\> [math]::Round($a,2)
+111.22
+
+
+
+
+--
+Type Accelerators
+
+[ADSI]$var = "LDAP://..."
+
+[xml]
+
+[INT]
+
+[STRING]
+
+
+
+
+======================================
+= Beyond this point be unsorted dragons
+======================================
+ 
