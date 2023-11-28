@@ -1,10 +1,12 @@
-USE TestingSpace
+/*   
+  Find Foreign Key constraints that affect a table (and column)
+	https://github.com/afun-entp/Shared_References
+*/
 
--- Find Foreign Key constraints that affect a table (and column)
 
 /* Parameters */
-DECLARE @ConstrainedTableName varchar(100) = 'DiagramTable1'        -- empty or NULL to select all tables that have constraints
-DECLARE @ConstrainedColumnName varchar(100) = 'DiagramTable1_ID'    -- empty or NULL to select any columns in the table
+DECLARE @ConstrainedTableName varchar(100) = 'DiagramTable1'        -- used in a LIKE clause. Empty or NULL to select all tables that have constraints
+DECLARE @ConstrainedColumnName varchar(100) = 'DiagramTable1_ID'    -- used in a LIKE clause. Empty or NULL to select any columns in the table
 
 /* Logic */
 SELECT
@@ -28,5 +30,5 @@ FROM [INFORMATION_SCHEMA].[REFERENTIAL_CONSTRAINTS]
                 ) TableKeyUsage
 		    ON TableKeyUsage.TABLE_NAME = ReferencedTable.[TABLE_NAME]
 
-WHERE ( '' = ISNULL(@ConstrainedTableName,'') OR @ConstrainedTableName = ReferencedTable.[TABLE_NAME]) 
-	AND ( '' = ISNULL(@ConstrainedColumnName,'') OR @ConstrainedColumnName = TableKeyUsage.[COLUMN_NAME])
+WHERE ( '' = ISNULL(@ConstrainedTableName,'') OR ReferencedTable.[TABLE_NAME] LIKE @ConstrainedTableName) 
+	AND ( '' = ISNULL(@ConstrainedColumnName,'') OR TableKeyUsage.[COLUMN_NAME] LIKE @ConstrainedColumnName)
