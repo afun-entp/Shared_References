@@ -4,9 +4,9 @@
 */
 
 
-/* Parameters */
-DECLARE @ConstrainingTableName varchar(100) = 'DiagramTable3'		-- used in a LIKE clause. Empty or NULL to select all tables that make referential constraints
-DECLARE @ConstrainingColumnName varchar(100) = 'DiagramTable1_ID'	-- used in a LIKE clause. Empty or NULL to select any columns in the table
+/* Local Variables */
+DECLARE @ConstrainingTableName varchar(100) = 'ExampleTable3'		-- used in a LIKE clause. Empty or NULL to select all tables that make referential constraints
+DECLARE @ConstrainingColumnName varchar(100) = 'ExampleForeign_ID'	-- used in a LIKE clause. Empty or NULL to select any columns in the table
 	
 /* Logic */
 SELECT

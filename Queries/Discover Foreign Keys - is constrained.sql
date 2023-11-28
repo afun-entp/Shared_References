@@ -4,9 +4,9 @@
 */
 
 
-/* Parameters */
-DECLARE @ConstrainedTableName varchar(100) = 'DiagramTable1'        -- used in a LIKE clause. Empty or NULL to select all tables that have constraints
-DECLARE @ConstrainedColumnName varchar(100) = 'DiagramTable1_ID'    -- used in a LIKE clause. Empty or NULL to select any columns in the table
+/* Local Variables */
+DECLARE @ConstrainedTableName varchar(100) = 'ExampleTable1'        -- used in a LIKE clause. Empty or NULL to select all tables that have constraints
+DECLARE @ConstrainedColumnName varchar(100) = 'ExampleTable1_ID'    -- used in a LIKE clause. Empty or NULL to select any columns in the table
 
 /* Logic */
 SELECT

@@ -4,10 +4,9 @@
   	https://github.com/afun-entp/Shared_References
 */
 
--- Choose a table and find Foreign Key relationships that it has with other tables ( include both upstream & downstream to see all relationships )
 
-/* Parameters */
-DECLARE @TableName varchar(100) = 'DiagramTable1'	-- used in a LIKE clause. Empty or NULL to select all tables make referential constraints
+/* Local Variables */
+DECLARE @TableName varchar(100) = 'ExampleTable1'	-- used in a LIKE clause. Empty or NULL to select all tables make referential constraints
 DECLARE @IncludeUpstreamReferences bit = 1      	-- 1 to include find Constraints where other tables refer to @TableName
 DECLARE @IncludeDownstreamReferences bit = 1    	-- 1 to include find referential Constraints that @TableName has on other tables
 
