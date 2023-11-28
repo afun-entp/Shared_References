@@ -1,11 +1,13 @@
-USE TestingSpace
+/*   Discover Foreign Keys 
+      "Is constraining?" - Choose a table (and column) to see if it is constraining other tables
+  	https://github.com/afun-entp/Shared_References
+*/
 
--- Choose a table (and column) to see if it is constraining other tables
 
 /* Parameters */
-DECLARE @ConstrainingTableName varchar(100) = 'DiagramTable3'
-DECLARE @ConstrainingColumnName varchar(100) = 'DiagramTable1_ID'  -- empty or NULL to select any columns in the table
-
+DECLARE @ConstrainingTableName varchar(100) = 'DiagramTable3'		-- used in a LIKE clause. Empty or NULL to select all tables make referential constraints
+DECLARE @ConstrainingColumnName varchar(100) = 'DiagramTable1_ID'	-- used in a LIKE clause. Empty or NULL to select any columns in the table
+	
 /* Logic */
 SELECT
     ConstrainingTable   = ConstrainingTable.[TABLE_NAME],
@@ -28,6 +30,5 @@ FROM [INFORMATION_SCHEMA].[REFERENTIAL_CONSTRAINTS]
                 ) TableKeyUsage
 		    ON TableKeyUsage.TABLE_NAME = ReferencedTable.[TABLE_NAME]
 
-WHERE ( '' = ISNULL(@ConstrainingTableName,'') OR @ConstrainingTableName = ConstrainingTable.[TABLE_NAME])
-	AND ( '' = ISNULL(@ConstrainingColumnName,'') OR @ConstrainingColumnName = TableKeyUsage.[COLUMN_NAME])
-
+WHERE ( '' = ISNULL(@ConstrainingTableName,'') OR ConstrainingTable.[TABLE_NAME] LIKE @ConstrainingTableName)
+	AND ( '' = ISNULL(@ConstrainingColumnName,'') OR TableKeyUsage.[COLUMN_NAME] LIKE @ConstrainingColumnName)
