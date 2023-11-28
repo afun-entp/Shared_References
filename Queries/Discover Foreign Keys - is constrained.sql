@@ -1,5 +1,5 @@
-/*   
-  Find Foreign Key constraints that affect a table (and column)
+/*   Discover Foreign Keys 
+      "Is constrained?" - Choose a table (and column) and find Foreign Key constraints that affect it
 	https://github.com/afun-entp/Shared_References
 */
 
