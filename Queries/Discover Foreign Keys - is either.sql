@@ -1,11 +1,15 @@
-USE TestingSpace
+/*   Discover Foreign Keys 
+      "Is constrained or is constraining?" 
+	- Choose a table to see if it makes referential constraints on other tables, or if other tables have a referential contstraint on it.
+  	https://github.com/afun-entp/Shared_References
+*/
 
 -- Choose a table and find Foreign Key relationships that it has with other tables ( include both upstream & downstream to see all relationships )
 
 /* Parameters */
-DECLARE @TableName varchar(100) = 'DiagramTable1'
-DECLARE @IncludeUpstreamReferences bit = 1      -- 1 to include find Constraints where other tables refer to @TableName
-DECLARE @IncludeDownstreamReferences bit = 1    -- 1 to include find referential Constraints that @TableName has on other tables
+DECLARE @TableName varchar(100) = 'DiagramTable1'	-- used in a LIKE clause. Empty or NULL to select all tables make referential constraints
+DECLARE @IncludeUpstreamReferences bit = 1      	-- 1 to include find Constraints where other tables refer to @TableName
+DECLARE @IncludeDownstreamReferences bit = 1    	-- 1 to include find referential Constraints that @TableName has on other tables
 
 IF (@IncludeUpstreamReferences = 0 AND @IncludeDownstreamReferences = 0)
     BEGIN
@@ -40,5 +44,5 @@ FROM [INFORMATION_SCHEMA].[REFERENTIAL_CONSTRAINTS]
                 ) TableKeyUsage
 		    ON TableKeyUsage.TABLE_NAME = ReferencedTable.[TABLE_NAME]
 
-WHERE ( @IncludeUpstreamReferences = 1 AND @TableName = ReferencedTable.[TABLE_NAME] ) 
+WHERE ( @IncludeUpstreamReferences = 1 AND ReferencedTable.[TABLE_NAME] LIKE @TableName) 
     OR ( @IncludeDownstreamReferences = 1 AND @TableName = ConstrainingTable.[TABLE_NAME])
