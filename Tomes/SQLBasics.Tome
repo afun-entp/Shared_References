@@ -1,1 +1,308 @@
 
+
+====================================
+= Language Elements - Begin
+====================================
+https://docs.microsoft.com/en-us/sql/t-sql/language-elements/language-elements-transact-sql
+
+----
+Slash Star Comments
+  /*  
+  text_of_comment  
+  */  
+ 
+
+----
+SQL AND & OR
+http://www.w3schools.com/sql/sql_and_or.asp
+
+
+----
+Conditional Operators
+
+IIF - https://www.tutorialgateway.org/sql-iif-function/
+
+Bitwise conditionals - https://docs.microsoft.com/en-us/sql/t-sql/language-elements/bitwise-operators-transact-sql?view=sql-server-2017
+	& Bitwise AND
+	| Bitwise OR
+	^ Bitwise exclusive OR
+	~ Bitwise NOT
+
+
+----
+SQL Wildcards 		 % _ [charlist]
+http://www.w3schools.com/sql/sql_wildcards.asp
+
+
+Wildcard	Description
+% 			zero or more characters  
+_ 			any single character 
+[charlist] 	Sets and ranges of characters to match 
+
+[^charlist] or
+[!charlist] Matches only a character NOT specified within the brackets 
+
+
+--
+SQL Wildcards - appending to parameters
+
+	where [dbColumn] like '%' + @parameter + '%'
+
+	NOTE: it's important that @parameter be defined as a varchar, otherwise it will have been left filled with spaces at the time of creation.
+
+
+----
+Sorting by more than on column
+
+Select * 
+FROM MeltRecipe 
+ORDER BY JobNumber, LineNumber;
+
+
+----
+Selective ORDER BY
+
+Use a CASE statement to select the columns. {This replaced a poorly functioning IF statement and kept an existing report alive until it could be replaced with better design.}
+
+	ORDER BY 
+		CASE WHEN @ReportMode <> 'Mismatch' THEN [RowType] END, 
+		CASE WHEN @ReportMode = 'Mismatch' THEN (PpiStagedTooLong + PpiStagedQueueMismatch + PpiFGQueueMismatch ) END,
+		Part
+
+
+----
+IN clause for multiple values
+
+SELECT TOP 100 [PourID]
+	,[AlarmID]
+	,[AlarmEventDate]
+FROM [dbMeka].[dbo].[AlarmEvent]
+where AlarmID IN ('2070_2.23', '2070_2.16')
+
+
+
+---- 
+Distinct clause
+
+	,WorkcenterCount = Count(Distinct [Detail].[WorkCenter])
+
+
+
+----
+UNION operator - used to combine the result-set of two or more SELECT statements.
+•Each SELECT statement within UNION must have the same number of columns  (Note: The column names in the result-set are usually equal to the column names in the first SELECT statement in the UNION.)
+•The columns must also have similar data types
+•The columns in each SELECT statement must also be in the same order
+
+UNION Syntax
+ SELECT column_name(s) FROM table1
+ UNION
+ SELECT column_name(s) FROM table2; 
+
+The UNION operator selects only distinct values by default. To allow duplicate values, use UNION ALL:
+
+ UNION ALL Syntax
+ SELECT column_name(s) FROM table1
+ UNION ALL
+ SELECT column_name(s) FROM table2; 
+
+
+
+
+
+----
+mathematic interactions with NULL result in NULL
+
+Select
+1  + NULL,
+Case When 1 > NULL then 'numeric' end
+
+results:
+| NULL	|	NULL  |
+
+====================================
+= Language Elements -End
+====================================
+	
+
+
+
+Find Largest Table in Database
+Step 1 :. First, open SQL Server Management Studio (SSMS) and select the target database (where you need to find the...
+Step 2 :. Once you right click on the target database you will see a lot of options. Select reports standard reports ...
+Step 3 :. Once you click on reports standard reports Disk Usage...
+
+----
+
+
+----
+Fast in SSMS, but slow in ADO.NET applications?  
+http://www.sommarskog.se/query-plan-mysteries.html
+
+
+----
+SQL Dependency tracking 
+
+GUI provides more thorough information (such as showing connections to Link Servers) but Code version is nice for pulling succinct detail for documentation
+
+-- as GUI 
+right-click object and "View Dependencies"
+
+
+-- as Code version:  
+select
+I.name depending, I.xtype dependingtype,
+E.name depended, E.xtype dependedtype
+from sys.sql_expression_dependencies D
+left outer join sysobjects I on D.referencing_id = I.id
+left outer join sysobjects E on D.referenced_id = E.id
+where 1 = 1
+and ( E.name = 'spMekaDtCompiledSelect' or I.name = 'spMekaDtCompiledSelect' )  -- customize this any way you want
+order by dependedtype, depended, dependingtype, depending
+
+
+
+
+====================================
+= Obscure Techniques -Start
+====================================
+
+
+----
+OVER and PARTITION BY
+http://www.midnightdba.com/Jen/2010/10/tip-over-and-partition-by/
+
+OVER allows you to get aggregate information without using a GROUP BY. In other words, you can retrieve detail rows, and get aggregate data alongside it. For example, this query:
+
+SELECT SUM(Cost) OVER () AS Cost
+ , OrderNum
+ FROM Orders
+
+Quick translation:
+	•SUM(cost) – get me the sum of the COST column
+	•OVER – for the set of rows….
+	•() – …that encompasses the entire result set.	
+
+	
+OVER(PARTITION BY)
+
+OVER, as used in our previous example, exposes the entire resultset to the aggregation…”Cost” was the sum of all [Cost]  in the resultset.  We can break up that resultset into partitions with the use of PARTITION BY:
+
+SELECT SUM(Cost) OVER (PARTITION BY CustomerNo) AS Cost
+ , OrderNum
+ , CustomerNo
+ FROM Orders
+
+
+
+----
+Lead and Lag Functions in SQL Server 2012
+	SQL Server 2012 introduced LEAD analytic function to access the subsequent row (or columns from the subsequent row) without using self-join or CTE or ranking function.
+	LAG function allows accessing previous rows from the same result set, again without using self-join
+
+
+--
+how to fake Lead and Lag for T-SQL 2008
+http://www.databasejournal.com/features/mssql/lead-and-lag-functions-in-sql-server-2012.html
+
+You can use Common Table Expression (CTE) along with the ROW_NUMBER ranking function to access subsequent rows in the same result set. For example, for a given customer I want to know the expiration date for the current plan based on the activation date of the next plan. Basically, when a new plan is started the previous plan is automatically ended and hence the end date for a previous plan is the start date minus one day of the next plan:
+WITH CTE as 
+(        SELECT RN = ROW_NUMBER() OVER (PARTITION BY   CustomerCode ORDER BY   StartDate ASC),   * 
+        FROM @CustomerPlan)
+SELECT
+        [Current   Row].*, 
+        ISNULL(DATEADD(DAY, -1, [Next Row].StartDate), '31-Dec-2099') AS EndDate
+FROM   CTE [Current Row]
+        LEFT JOIN CTE [Next   Row] ON [Current Row].CustomerCode   = [Next Row].CustomerCode   AND  [Next Row].RN   = [Current Row].RN   + 1
+ORDER BY [Current Row].CustomerCode, [Current Row].RN;
+
+
+
+----
+Convert between mathematical Bases
+http://improve.dk/converting-between-base-2-10-and-16-in-t-sql/
+
+
+====================================
+= Obscure Techniques -End
+====================================
+
+
+
+====================================
+= SQL Server & Management -Start
+====================================
+
+
+----
+Server Management
+
+sp_who 
+Provides information about current users, sessions, and processes in an instance of the Microsoft SQL Server Database Engine. 
+The information can be filtered to return only those processes that are not idle, that belong to a specific user, or that belong to a specific session. 
+
+----
+DTS Jobs
+
+How to: View Data Transformation Services Packages in SQL Server Management Studio
+https://technet.microsoft.com/en-us/library/cc645945(v=sql.105).aspx
+
+--
+DTSRun - Decoding DTS command line parameters
+https://gallery.technet.microsoft.com/Decrypting-the-encrypted-f04cc4d5
+
+
+
+----
+SQL restores
+
+
+
+-- with Full, Differential and Transaction Log Backups - https://www.mssqltips.com/sqlservertip/6893/restore-database-sql-server-options-examples/
+"This is where the differential backups are very useful. This time, we’ll repeat restoring MyDatabaseTest to the latest point in time with the full, differential, and transaction log backups."
+
+1) Restore the latest full backup
+2) As differential backups have the data that’s changed since the last full backup, jump straight to the latest differential backup
+3) you only need to restore transaction log backups from *after* latest differential backup
+
+
+Restore the latest full backup
+As differential backups have the data that’s changed since the last full backup, we can omit the transaction log backups between the full backup and the latest differential backup
+We’ll only need the transaction log backups after latest differential backup
+
+
+----
+SQL command recovery - pseudo-history
+
+--
+If SQL Server hasn't been restarted (and the plan hasn't been evicted, etc.), you may be able to find the query in the plan cache.
+	SELECT t.[text]
+	FROM sys.dm_exec_cached_plans AS p
+	CROSS APPLY sys.dm_exec_sql_text(p.plan_handle) AS t
+	WHERE t.[text] LIKE N'%something unique about your query%';
+
+
+it might be helpful to join on sys.dm_exec_query_stats and order by last_execution_time:
+	SELECT t.[text], s.last_execution_time
+	FROM sys.dm_exec_cached_plans AS p
+	INNER JOIN sys.dm_exec_query_stats AS s
+		ON p.plan_handle = s.plan_handle
+	CROSS APPLY sys.dm_exec_sql_text(p.plan_handle) AS t
+	WHERE t.[text] LIKE N'%something unique about your query%'
+	ORDER BY s.last_execution_time DESC;
+
+
+
+--
+If you lost the file because Management Studio crashed, you might be able to find recovery files here:
+C:\Users\<you>\Documents\SQL Server Management Studio\Backup Files\
+
+
+
+====================================
+= SQL Server & Management -End
+====================================
+
+
+
+
