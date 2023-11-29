@@ -28,8 +28,7 @@ A system with high failure transparency will alert users that a component failur
 
 
 
-----
-Science, observation and prediction
+---- Science, observation and prediction
 
 When we keep track of our observations, suprisingly intricate patterns emerge that can be generalized. This is called Science.
 We create theories to explain the patterns, these theories posit mechanisms, which are supposed to be the cause resulting in the patterns.
@@ -37,8 +36,7 @@ We can use them to predict new observations, when these predictions become true 
 
 
 
-----
-Retroduction ( Reasoning back from Observation to Explanation )
+---- Retroduction ( Reasoning back from Observation to Explanation )
 
 Abductive Logic:
 Surprising fact, C, is observed;
@@ -76,10 +74,9 @@ non-production personnel and resources, overall productivity is increased.
  ( Preventative Maintenance vs. Production Breakdowns )
 
  
-----
-Root Cause analysis:
+---- Root Cause analysis:
 If you can't control it (turn it off and on) with preventative action, then you have found the root cause.
-
+Your next responsability is to make it controllable.
  
  
 ----
@@ -94,13 +91,13 @@ Every Cell should be:
 	Self-Resetting
 
 
-	Modular 		 = Has a clear and specific purpose that it accomplishes, and does it well. Another cell needing that function performed can provide properly formatted input, and correct and consistent output will be generated.
-	Self-Sufficient  = All dependencies are local. If a function is core to a cell performing it's clear and specific purpose, then that function must be brought into the cell, even if this creates duplication and version management overhead.
-	  and Redundant  = External resources may provide advantages that makes them the preferred option. Self-Sufficient local resources must still exist as part of a fallback strategy.
-	Error-Mitigating = Control and de-escalate errors. Respond and output in a way that respects the next module.
-	Informative		 = Comprehensive Logging, especially for failures. Notify. Redundant output; don't rely on smtp alone, when creating files for a remote location generate locally and then move.
-	Resilient		 = Returning to a ready-state should be the goal of every process, subroutine, condition, or state.
-	Self-Resetting	 = "Turn it off and Turn it back on" should be a valid troubleshooting technique. Each cell should initialize a clean & self-sufficient environment as part of startup.
+	Modular 		= Has a clear and specific purpose that it accomplishes, and does it well. Another cell needing that function performed can provide properly formatted input, and correct and consistent output will be generated.
+	Self-Sufficient  	= All dependencies are local. If a function is core to a cell performing it's clear and specific purpose, then that function must be brought into the cell, even if this creates duplication and version management overhead.
+	  and Redundant  	= External resources may provide advantages that makes them the preferred option. Self-Sufficient local resources must still exist as part of a fallback strategy.
+	Error-Mitigating 	= Control and de-escalate errors. Respond and output in a way that respects the next module.
+	Informative		= Comprehensive Logging, especially for failures. Notify. Redundant output; don't rely on smtp alone, when creating files for a remote location generate locally and then move.
+	Resilient		= Returning to a ready-state should be the goal of every process, subroutine, condition, or state.
+	Self-Resetting	 	= "Turn it off and Turn it back on" should be a valid troubleshooting technique. Each cell should initialize a clean & self-sufficient environment as part of startup.
 	
 	
 ----
@@ -108,13 +105,10 @@ Every Cell should be:
 "That's a good thing, but it's only a good thing if it's done in a way that's manageable" - Michael Broderick
 
 ----
-
 The road is not paved, it has to be discovered.
 
 
-----
-
-Cognitive Walkthrough
+---- Cognitive Walkthrough
 
 A cognitive walkthrough starts with a task analysis that specifies the sequence of steps or actions required by a user to accomplish a task, and the system responses to those actions. The designers and developers of the software then walk through the steps as a group, asking themselves a set of questions at each step. Data is gathered during the walkthrough, and afterwards a report of potential issues is compiled. Finally the software is redesigned to address the issues identified. 
 
@@ -123,15 +117,15 @@ The effectiveness of methods such as cognitive walkthroughs is hard to measure i
 Walking through the tasks[edit]
 
 After the task analysis has been made the participants perform the walkthrough by asking themselves a set of questions for each subtask. Typically four questions are asked:[1] 
-Will the user try to achieve the effect that the subtask has? 						E.g. Does the user understand that this subtask is needed to reach the user's goal?
-Will the user notice that the correct action is available? 							E.g. is the button visible?
+Will the user try to achieve the effect that the subtask has? 				E.g. Does the user understand that this subtask is needed to reach the user's goal?
+Will the user notice that the correct action is available? 				E.g. is the button visible?
 Will the user understand that the wanted subtask can be achieved by the action? 	E.g. the right button is visible but the user does not understand the text and will therefore not click on it.
-Does the user get appropriate feedback? 											Will the user know that they have done the right thing after performing the action?
+Does the user get appropriate feedback? 						Will the user know that they have done the right thing after performing the action?
 
 By answering the questions for each subtask usability problems will be noticed. 
 
-----
 
+----
 Assertive communication is problem-solving in nature. 
 You remain calm, cool, & collected. (Neither passive, or aggressive.)
 Your answer, intentions, and body language are in harmony.
