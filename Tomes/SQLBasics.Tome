@@ -1427,6 +1427,17 @@ Simplify Your SQL with Variables and Common Table Expressions (or Derived Tables
 			on tempdisaPat=Pattern
 
 
+--
+https://www.mssqltips.com/sql-server-tip-category/23/t-sql/
+
+https://mcpmag.com/articles/2016/12/08/checking-sql-best-practices.aspx?m=1
+
+----
+Connection String 
+
+Parameters
+https://www.connectionstrings.com/all-sql-server-connection-string-keywords/
+
 
 --
 Speeding up queries by eliminating SCANs
