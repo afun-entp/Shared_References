@@ -86,6 +86,27 @@ Distinct clause
 
 	,WorkcenterCount = Count(Distinct [Detail].[WorkCenter])
 
+----
+Using SELECT DISTINCT to quickly pull unique "category" items from a list
+
+SELECT DISTINCT CostCenter, department, Departmentname
+  FROM [dbACPShopFloor].[dbo].[SAPPAY10]
+    Join DepartmentCodes on Department = Code
+  
+  Group by costCenter, department, Departmentname
+
+
+
+----
+Use a HAVING() clause to identify duplicate rows (particularly useful when adding key constraints to previously existing data)
+
+SELECT [TimeStamp]
+      ,[Line]
+	  ,min(pourid)
+  FROM [dbMeka].[dbo].[Meka-archive]
+  Group by timestamp, line 
+  Having count(timestamp) > 1
+	
 
 
 ----
@@ -109,6 +130,78 @@ The UNION operator selects only distinct values by default. To allow duplicate v
 
 
 
+---- 
+using CASE
+ 
+	---
+	Code snippent - using SUM and CASE
+
+		DECLARE @t table(id int)
+		INSERT @t VALUES(10)
+		INSERT @t VALUES(5)
+		INSERT @t VALUES(6)
+		INSERT @t VALUES(20)
+
+		SELECT
+			SUM(CASE WHEN id>=10 THEN id ELSE 0 END) 
+		FROM @t
+
+
+	---
+	SUM with CASE    (or COUNT with CASE )
+
+	When you are just counting, you can use a 1 instead of a field for the value to count.
+	Specify ELSE 0 if you want to avoid NULLs, if you want NULL you can just leave out the "ELSE 0"
+
+		sum(Case When MoldStatus=3 Then 1 ELSE 0 END) as GoodMolds
+		sum(Case When MoldStatus=7 Then 1 ELSE 0 END) as SkippedMolds
+		sum(Case When MoldStatus<>7 and MoldStatus<>3 Then 1 ELSE 0 END) as BadMolds
+		COUNT(moldstatus) as StatusCount
+
+
+
+	---
+	CASE with an open ended ELSE
+	 Logic:if the CASE statements do not match, return the value of the source field - particularly for reporting scenerios
+
+		Case WHEN [HFWaterReadings].[WaterCooledLeadBFlowStatus] = 1 THEN 'OK' 
+				WHEN [HFWaterReadings].[WaterCooledLeadBFlowStatus] = 2 THEN 'Warning' 
+				WHEN [HFWaterReadings].[WaterCooledLeadBFlowStatus] = 3 THEN 'Alarm' 
+			ELSE STR([HFWaterReadings].[WaterCooledLeadBFlowStatus]) END as WaterCooledLeadBFlowStatus
+
+
+	---
+	using CASE to identify a specific character in a string.
+
+		select
+		Case	When [PatternName]	like '%A%' Then 1 
+				When [PatternName]	like '%B%' Then 2 
+				When [PatternName]	like '%C%' Then 3 
+				When [PatternName]	like '%D%' Then 4 
+				end
+
+
+	---
+	using CASE When ... and ...
+
+		MAX(Case 
+			When Mphtarget IS NULL and Line = 2013 Then 320 
+			When Mphtarget IS NULL and Line = 2070 then 220 
+			ELSE Mphtarget END )
+
+
+
+
+
+====================================
+= Language Elements -End
+====================================
+	
+
+===========================================
+= Data Integrity and Transformation - Start
+===========================================
+
 
 ----
 mathematic interactions with NULL result in NULL
@@ -120,53 +213,161 @@ Case When 1 > NULL then 'numeric' end
 results:
 | NULL	|	NULL  |
 
-====================================
-= Language Elements -End
-====================================
-	
-
-
-
-Find Largest Table in Database
-Step 1 :. First, open SQL Server Management Studio (SSMS) and select the target database (where you need to find the...
-Step 2 :. Once you right click on the target database you will see a lot of options. Select reports standard reports ...
-Step 3 :. Once you click on reports standard reports Disk Usage...
-
-----
 
 
 ----
-Fast in SSMS, but slow in ADO.NET applications?  
-http://www.sommarskog.se/query-plan-mysteries.html
+INT type limits
+
+bigint		8 Bytes	-9,223,372,036,854,775,808  to  9,223,372,036,854,775,807
+int		4 Bytes	            -2,147,483,648  to  2,147,483,647
+smallint	2 Bytes	                   -32,768  to  32,767
+tinyint		1 Byte	                         0  to  255
+
 
 
 ----
-SQL Dependency tracking 
+Converting a string to an INT
+  select 
+  Convert(Int,left('2070',4)) 
+ 	
+----
+TRY_CAST or TRY_CONVERT to determine if a value is valid for a certain TYPE (requires TSQL 2012+)
 
-GUI provides more thorough information (such as showing connections to Link Servers) but Code version is nice for pulling succinct detail for documentation
+	-- will fail for decimal values, but allow negative values
+	TRY_CAST(@value AS INT) IS NOT NULL 
 
--- as GUI 
-right-click object and "View Dependencies"
+	-- will fail for non-positive integers; can be used with other examples below as well, or reversed if only negative desired
+	TRY_CAST(@value AS INT) > 0
+
+	-- will fail if a $ is used, but allow decimals to the specified precision
+	TRY_CAST(@value AS DECIMAL(10,2)) IS NOT NULL 
+
+	-- will allow valid currency
+	TRY_CAST(@value AS MONEY) IS NOT NULL  
+
+	-- will allow scientific notation to be used like 1.7E+3
+	TRY_CAST(@value AS FLOAT) IS NOT NULL 
 
 
--- as Code version:  
-select
-I.name depending, I.xtype dependingtype,
-E.name depended, E.xtype dependedtype
-from sys.sql_expression_dependencies D
-left outer join sysobjects I on D.referencing_id = I.id
-left outer join sysobjects E on D.referenced_id = E.id
-where 1 = 1
-and ( E.name = 'spMekaDtCompiledSelect' or I.name = 'spMekaDtCompiledSelect' )  -- customize this any way you want
-order by dependedtype, depended, dependingtype, depending
+	-- place inside of an INSULL to create fully protected results
+	TextToNumber	= ISNULL( TRY_CONVERT(int, 'o407'), 0)
 
+
+
+
+----
+Splitting a column into multiple columns - fixed length
+example using Pattern BOM from MES, BOM_List may contain up to 3 Cores  'H0072.C1, H0072.C2, H0072.C3'
+
+	Declare @myTVar as table ( Pattern Nchar(50), Part Nchar(50), Quantity Int, BOM_List Nchar(50));
+		Insert into @myTVar( Pattern, Part, Quantity, BOM_List)
+		exec [ftpc_mir].dbo.PROC_EQUIPMENT_PARTS_BOM 
+
+	Select 
+		pattern,
+		part,
+		Quantity,
+		BOM_List,
+		col1 = Case when BOM_List like '%,%' Then LEFT(BOM_List, CHARINDEX(',',BOM_List) - 1) Else BOM_List END, 
+		col2 = Case when BOM_List like '%,%' Then RIGHT(LEFT(BOM_List, 19),8) Else NULL END,
+		col3 = Case when BOM_List like '%,%,%' Then RIGHT(LEFT(BOM_List, 29),8) Else NULL END
+	from @myTVar
+ 
+
+----
+Pad Left ( or fill with leading zeroes )
+
+SELECT RIGHT(REPLICATE('0', 18) + '43543', 18);
+
+SELECT RIGHT ('000000000000000000' + '43543', 18 )
+
+
+----
+Substring - Returns part of a character, binary, text, or image expression in SQL Server
+
+SELECT SUBSTRING(FirstName, 1, 1) AS Initial  
+
+
+----
+String Concatenation
+
+SELECT (LastName + ', ' + FirstName) AS Name 
+
+ - https://msdn.microsoft.com/en-us/library/ms177561.aspx
+
+	--- No CONVERT or CAST function is required because this example concatenates two binary strings.  
+	SELECT @mybinary1 + @mybinary2
+
+
+	--- A CONVERT or CAST function is required because this example  concatenates two binary strings plus a space.  
+	SELECT CONVERT(varchar(5), @mybinary1) + ' ' + CONVERT(varchar(5), @mybinary2)  
+
+
+	--- Here is the same conversion using CAST.  
+	SELECT CAST(@mybinary1 AS varchar(5)) + ' '  + CAST(@mybinary2 AS varchar(5))  
+
+
+----
+ROUND(column_name,decimals)
+
+to remove fractional differences when doing a "Per" calculation use: 
+	ROUND ( (Value1 / value2),0)
+	{ this makes (160 / 40) and (159 / 40) both return 4 }
+
+
+----
+Ways to Prevent Division by Zero in SQL
+
+	-- Wrap the formula in ISNULL to protect against either value being 0
+	ISNULL ( 1/0, 0 )
+
+
+	-- using COALESCE - https://docs.microsoft.com/en-us/sql/t-sql/language-elements/coalesce-transact-sql
+
+	SELECT COALESCE(dividend / NULLIF(divisor,0), 0) FROM sometable
+
+	The ISNULL function and the COALESCE expression have a similar purpose but can behave differently. 
+	1.Because ISNULL is a function, it is evaluated only once. The input values for the COALESCE expression can be evaluated multiple times. 
+	2.Data type determination of the resulting expression is different. ISNULL uses the data type of the first parameter, COALESCE follows the CASE expression rules and returns the data type of value with the highest precedence. 
+	3.The NULLability of the result expression is different for ISNULL and COALESCE.
+
+
+
+	-- basic coalesce usage
+	Coalesce function that accepts many inputs but returns the first input value that is NOT NULL.
+
+	SELECT COALESCE(NULL, 1, 2) WHERE 2 = COALESCE(NULL, NULL, 2)
+
+
+
+	-- Return NULL if Divide by 0
+	use the 'IF function. NULLIF requires two arguments. 
+	If the arguments are equal ( Quantity = 0 ) then NULLIF returns a null value. If they are not equal ( Quantity <> 0 ) NULLIF returns the first value and the calculation is Amount divided by NULL, which yields NULL
+
+	PatternYield = ( NULLIF(Sum([BomTotalCastingLbs]),0) / NULLIF(Sum([PourTreeTotalLbs]),0) ) * 100
+
+	If you use this technique, be sure to put the zero in the second argument of NULLIF. 
+
+	select itnbr, Amount, Quantity,
+       Amount / nullif(Quantity,0)
+	from SomeTable
+
+
+	-- further explainations
+	http://www.itjungle.com/fhg/fhg051210-story02.html
+
+
+
+
+===========================================
+= Data Integrity and Transformation - End
+===========================================
 
 
 
 ====================================
 = Obscure Techniques -Start
 ====================================
-
 
 ----
 OVER and PARTITION BY
@@ -232,6 +433,63 @@ http://improve.dk/converting-between-base-2-10-and-16-in-t-sql/
 ====================================
 = SQL Server & Management -Start
 ====================================
+
+----
+Find Largest Table in Database
+-- in GUI
+Step 1 :. First, open SQL Server Management Studio (SSMS) and select the target database (where you need to find the...
+Step 2 :. Once you right click on the target database you will see a lot of options. Select reports standard reports ...
+Step 3 :. Once you click on reports standard reports Disk Usage...
+
+
+-- in code
+USE ExampleDB -- replace with your dbname
+GO
+SELECT top 20
+       s.Name AS SchemaName,
+       t.Name AS TableName,
+       p.rows AS RowCounts,
+       CAST(ROUND((SUM(a.used_pages) / 128.00), 2) AS NUMERIC(36, 2)) AS Used_MB,
+       CAST(ROUND((SUM(a.total_pages) - SUM(a.used_pages)) / 128.00, 2) AS NUMERIC(36, 2)) AS Unused_MB,
+       CAST(ROUND((SUM(a.total_pages) / 128.00), 2) AS NUMERIC(36, 2)) AS Total_MB
+FROM sys.tables t
+       INNER JOIN sys.indexes i ON t.OBJECT_ID = i.object_id
+       INNER JOIN sys.partitions p ON i.object_id = p.OBJECT_ID AND i.index_id = p.index_id
+       INNER JOIN sys.allocation_units a ON p.partition_id = a.container_id
+       INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+GROUP BY t.Name, s.Name, p.Rows
+
+ORDER BY CAST(ROUND((SUM(a.total_pages) / 128.00), 2) AS NUMERIC(36, 2)) DESC -- Largest at top
+-- ORDER BY s.Name, t.Name -- alphabetical
+GO
+
+
+
+----
+Fast in SSMS, but slow in ADO.NET applications?  
+http://www.sommarskog.se/query-plan-mysteries.html
+
+
+----
+SQL Dependency tracking 
+
+GUI provides more thorough information (such as showing connections to Link Servers) but Code version is nice for pulling succinct detail for documentation
+
+-- in GUI 
+right-click object and "View Dependencies"
+
+
+-- in Code version:  
+select
+	I.name depending, I.xtype dependingtype,
+	E.name depended, E.xtype dependedtype
+from sys.sql_expression_dependencies D
+left outer join sysobjects I on D.referencing_id = I.id
+left outer join sysobjects E on D.referenced_id = E.id
+where 1 = 1
+	and ( E.name = 'spMekaDtCompiledSelect' or I.name = 'spMekaDtCompiledSelect' )  -- customize this any way you want
+order by dependedtype, depended, dependingtype, depending
+
 
 
 ----
