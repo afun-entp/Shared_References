@@ -1348,6 +1348,85 @@ C:\Users\<you>\Documents\SQL Server Management Studio\Backup Files\
 smart coding practices
  http://sqlblog.com/blogs/aaron_bertrand/archive/2008/10/30/my-stored-procedure-best-practices-checklist.aspx
 
+--
+
+		 
+
+--
+Simplify Your SQL with Variables and Common Table Expressions (or Derived Tables) 
+	http://weblogs.sqlteam.com/jeffs/archive/2007/12/20/simplify-sql-with-variables-and-derived-tables.aspx
+	http://www.codeproject.com/Articles/265371/Common-Table-Expressions-CTE-in-SQL-SERVER
+
+
+	---
+	-Variable example
+
+		DECLARE 
+			@bookmark2013 BigInt,
+			@bookmark2070 BigInt
+			;
+
+		Select top 1 @bookmark2013 = FirstPourID
+			from dbShopFloor.dbo.MekaTLSummary
+			Where Line = 2013
+			Order by TLStartTime desc
+
+		Select top 1 @bookmark2070 = FirstPourID
+			from dbShopFloor.dbo.MekaTLSummary
+			Where Line = 2070
+			Order by TLStartTime desc 
+
+		Print @bookmark2013
+		Print @bookmark2070
+
+
+
+	---
+	-Table example
+
+		Declare @bookmarkTVar as table( Line Nchar(5), PourId BigInt);
+
+		Insert Into @bookmarkTVar 
+		Select top 1 Line, FirstPourID as PourID
+			from dbShopFloor.dbo.MekaTLSummary
+			Where Line = 2013
+			Order by TLStartTime desc
+		;	
+
+		Insert Into @bookmarkTVar 
+		Select top 1 Line, FirstPourID as PourID
+			from dbShopFloor.dbo.MekaTLSummary
+			Where Line = 2070
+			Order by TLStartTime desc
+		;
+
+		select * from @bookmarkTVar
+
+
+	---
+	-Alternate Table example
+
+		Declare @yourTable as table(Pattern Float, Pieces Int);
+
+		Insert Into @yourTable
+		Values (353, 2)
+		;
+	
+
+		Declare @myTableVar as table(tempDisaPat Float, tempMoldStat Int);
+
+		Insert Into @myTableVar 
+		Select DisaPatternNumber, COUNT(Moldstatus) as Moldcount 
+			from dbMeka.dbo.Meka
+			Where (MONTH(timestamp) = 3) AND (YEAR(timestamp) = 2015) AND (DAY(timestamp) = 31) AND (MoldStatus = 3)
+			Group by DISAPatternNumber
+		;
+
+		Select tempdisapat, tempMoldStat * Pieces  from @myTableVar
+			Join @yourTable 
+			on tempdisaPat=Pattern
+
+
 
 --
 Speeding up queries by eliminating SCANs
