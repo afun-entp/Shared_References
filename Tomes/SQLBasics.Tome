@@ -366,68 +366,846 @@ Ways to Prevent Division by Zero in SQL
 
 
 ====================================
-= Obscure Techniques -Start
+= Date & Time - Begin
 ====================================
+ 
+----
+Current DATETIME
+
+SELECT getdate()
+
 
 ----
-OVER and PARTITION BY
-http://www.midnightdba.com/Jen/2010/10/tip-over-and-partition-by/
+Comparing against a date field 
 
-OVER allows you to get aggregate information without using a GROUP BY. In other words, you can retrieve detail rows, and get aggregate data alongside it. For example, this query:
+**Note: when converting to DATETIME without making a time reference the time becomes 00:00:00, compare accordingly
 
-SELECT SUM(Cost) OVER () AS Cost
- , OrderNum
- FROM Orders
+   WHERE (Date > Convert(DATE, '20140101' )) And (Date < Convert(DATE, '20141201' ) )
 
-Quick translation:
-	•SUM(cost) – get me the sum of the COST column
-	•OVER – for the set of rows….
-	•() – …that encompasses the entire result set.	
+   WHERE (Date > Convert(DATETIME, '20140101' )) And (Date < Convert(DATETIME, '20141201' ) )
 
+
+**Example: comparing 2 DATETIME sources to see if they have the same date value
+   WHERE (Convert(DATE,dcTimeStamp)) = (Convert(DATE,Cast('@parameter' As DATETIME))
+
+
+**Example: You can group by this extrapolated value as well
+   GROUP BY Convert(DATE,dcTimeStamp)
+
+
+**Error: SQL 2005 “Type DATE is not a defined system type.”
+DATE & TIME only became seperatable data types in SQL 2008, for older versions you must work with the DATETIME type
+
+
+
+----
+Converting to DATE, TIME, or DATETIME  -  CONVERT() Function http://www.w3schools.com/sql/func_convert.asp
+
+CONVERT(DATE,SourceItem)
+
+CONVERT(TIME,SourceItem)
+
+**Note: SourceItem can be a column value, a declared '@parameter', or a correctly formatted text string
+
+CONVERT(DATETIME, '9/11/1999 12:00:00')
+
+
+http://www.sqlusa.com/bestpractices/datetimeconversion/
+
+
+----
+Converting from DateTime to string, with specific formats
+
+
+
+CONVERT(varchar, [last_modified_time],1)
+	-- format 1 = MM/DD/YY
+
+CONVERT(varchar, [last_modified_time],22)
+	-- format 22 = MM/DD/YY hh:mm:ss AM/PM
+
+
+CONVERT(varchar, [last_modified_time],111)
+	-- format 111 = YYYY/MM/DD
+
+
+CONVERT(varchar, [last_modified_time],112)
+	-- format 112 = YYYYMMDD
+
+CONVERT(varchar, [last_modified_time],20)
+	-- format 20 = YYYY-MM-DD hh:mm:ss
+
+
+
+https://www.mssqltips.com/sqlservertip/1145/date-and-time-conversions-using-sql-server/
+
+
+----
+timezone localization
+
+SELECT GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Central Standard Time'
+
+chaining together the AT TIME ZONE statements effectively says "We're going to establish what TIME ZONE the supplied datetime is in, and then convert that to a second TIME ZONE"
+
+This can be done using any known timestamp as the indicator. (UTC is best for live timestamps, but conversion from other ZONEs might be relevant for historical data).
+SELECT GETDATE() AT TIME ZONE 'Eastern Standard Time' AT TIME ZONE 'Central Standard Time'
+
+
+
+
+----
+DATE Addition
+
+DATEADD (datepart , number , date )
+
+
+Date Subtraction 
+
+DATEADD (datepart , number * -1 , date )
+
+
+----
+Adding TIME to DATETIME
+
+select 
+ Cast('9/11/2009 00:00:00' as DateTime) + Cast('12:00:00' as Time) 
+
+When using a parameter that may be 0 the parameter must still be in proper time format 
+ Cast('9/11/2009 12:00:00' as DateTime) + Cast('00:00:00' as Time)   
+
+
+----
+Finding midnight 
+
+MidnightToday = Convert(DateTime, DATEDIFF(DAY, 0, GETDATE()))
+
+
+
+----
+Turn a seconds value into other forms
+
+  ,dtAsSeconds = sum([dtSeconds])
+  ,dtAsMinutes = sum([dtSeconds]) / 60
+  ,dtAsHours   = sum([dtSeconds]) / 3600
+  ,dtAsDays    = (sum([dtSeconds]) / 3600) / 24
+
+
+	--	alternate as suggested by   https://www.mytechmantra.com/LearnSQLServer/Convert-Seconds-to-Minutes-Hours-and-Days-in-SQL-Server/
+	DECLARE @Seconds INT = 182800;
+	SELECT 
+		Days     = CONVERT(VARCHAR(12), @Seconds / 60 / 60 / 24)
+		,Hours   = CONVERT(VARCHAR(12), @Seconds / 60 / 60 % 24)
+		,Minutes = CONVERT(VARCHAR(2), @Seconds / 60 % 60)
+		,Seconds = CONVERT(VARCHAR(2), @Seconds % 60)
+
+
+  
+---- 	
+Turn an integer value (such as seconds) into hh:mm:ss
+  -- simple version -- NOTE: this will be meaningless if there is more than 1 day's worth of seconds
+
+  dtAsTime =  CONVERT(TIME, DateAdd(second, sum([dtSeconds]),0) )
+
+  
+-----
+Turn an integer value (such as seconds) into day count plus hh:mm:ss
+   -- advanced version -- NOTE: this will be meaningless if there is more than 1 day's worth of seconds
+
+   '' + (Case WHEN @Seconds >= 172800 THEN CONVERT(VARCHAR(12), @Seconds / 60 / 60 / 24) + ' Days  '  
+				WHEN @Seconds > 86400 THEN CONVERT(VARCHAR(12), @Seconds / 60 / 60 / 24) + ' Day   ' ELSE '' END )  
+		+ CONVERT(VARCHAR(2), @Seconds / 60 / 60 % 24) + ':' + CONVERT(VARCHAR(2), @Seconds / 60 % 60) + ':' + CONVERT(VARCHAR(2), @Seconds % 60) AS ' Day(s) Hour(s) : Minute(s) : Second(s) ' 
 	
-OVER(PARTITION BY)
 
-OVER, as used in our previous example, exposes the entire resultset to the aggregation…”Cost” was the sum of all [Cost]  in the resultset.  We can break up that resultset into partitions with the use of PARTITION BY:
+  
+  
+----
+Day of Year, DOY, ("Julian" Date)
 
-SELECT SUM(Cost) OVER (PARTITION BY CustomerNo) AS Cost
- , OrderNum
- , CustomerNo
- FROM Orders
-
+SELECT datepart(dayofyear, getdate())
 
 
 ----
-Lead and Lag Functions in SQL Server 2012
-	SQL Server 2012 introduced LEAD analytic function to access the subsequent row (or columns from the subsequent row) without using self-join or CTE or ranking function.
-	LAG function allows accessing previous rows from the same result set, again without using self-join
+using DATEPART
+syntax: DATEPART ( datepart , date )
+
+datepart	Abbreviations
+  year		    yy, yyyy
+  quarter	 	qq, q
+  month		 	mm, m
+  dayofyear	 	dy, y
+  day		 	dd, d
+  week		 	wk, ww
+  weekday	 	dw
+  hour		 	hh
+  minute	 	mi, n
+  second	 	ss, s
+  millisecond	ms
+  microsecond	mcs
+  nanosecond	ns
+  TZoffset	 	tz
+  ISO_WEEK	 	isowk, isoww
+
 
 
 --
-how to fake Lead and Lag for T-SQL 2008
-http://www.databasejournal.com/features/mssql/lead-and-lag-functions-in-sql-server-2012.html
+Using Date parts in a select
 
-You can use Common Table Expression (CTE) along with the ROW_NUMBER ranking function to access subsequent rows in the same result set. For example, for a given customer I want to know the expiration date for the current plan based on the activation date of the next plan. Basically, when a new plan is started the previous plan is automatically ended and hence the end date for a previous plan is the start date minus one day of the next plan:
-WITH CTE as 
-(        SELECT RN = ROW_NUMBER() OVER (PARTITION BY   CustomerCode ORDER BY   StartDate ASC),   * 
-        FROM @CustomerPlan)
-SELECT
-        [Current   Row].*, 
-        ISNULL(DATEADD(DAY, -1, [Next Row].StartDate), '31-Dec-2099') AS EndDate
-FROM   CTE [Current Row]
-        LEFT JOIN CTE [Next   Row] ON [Current Row].CustomerCode   = [Next Row].CustomerCode   AND  [Next Row].RN   = [Current Row].RN   + 1
-ORDER BY [Current Row].CustomerCode, [Current Row].RN;
+SELECT  *, Sand.*, SandDate AS Expr1
+  FROM  Sand
+  WHERE (MONTH(SandDate) = 03) AND (YEAR(SandDate) = 2014) AND (DAY(SandDate) < 18) AND ({ fn HOUR(SandDate) } < 12)
+  ORDER BY SandDate DESC
+
+  
+-- 
+Establishing ShiftID and ShiftDate
+
+on a 5 to 5 schedule
+
+	,ShiftDate		 = CASE when datepart(hour,[stopTime])> 22 then dateadd(day,1,CONVERT([date],[stopTime],0)) 
+							ELSE CONVERT([date],[stopTime], 0) end
+	,ShiftID		 = CASE when datepart(hour,[startTime])>=5 AND datepart(hour,[startTime])<17 then 1 else 2 end
+
+
+on an 11, 7, and 3 schedule
+	  
+	,ShiftDate		 =   CASE when DATEPART(hour, Convert(DateTime, MAX([AT_sapUploadQueue].[creation_time]))) >= 23 THEN DATEADD(day,1, Convert(Date, Convert(DateTime, MAX([AT_sapUploadQueue].[creation_time]))) )
+							ELSE Convert(Date, Convert(Date, MAX([AT_sapUploadQueue].[creation_time]))) End
+
+	,ShiftDate		 =   Case when DATEPART(hour, Convert(DateTime, MAX([AT_sapUploadQueue].[creation_time]))) >= 7 and DATEPART(hour, Convert(DateTime, MAX([AT_sapUploadQueue].[creation_time]))) < 15 Then 1
+						   when DATEPART(hour, Convert(DateTime, MAX([AT_sapUploadQueue].[creation_time]))) >= 15 and DATEPART(hour, Convert(DateTime, MAX([AT_sapUploadQueue].[creation_time]))) < 23 Then 2
+						   ELSE 3 END  
+  
+ 
+
+-- 
+determining the beginning of the week
+
+SELECT 
+	MidnightToday = Convert(DateTime, DATEDIFF(DAY, 0, GETDATE())),
+	BeginOfWeekSunday = DATEADD(DAY, 1 - DATEPART(WEEKDAY, GETDATE()),Convert(DateTime, DATEDIFF(DAY, 0, GETDATE())) ),
+
+	BeginOfWeekMonday = CASE 
+		WHEN DATEPART(WEEKDAY, GETDATE()) <> 1 
+			THEN DATEADD(DAY, 1 + (1 - DATEPART(WEEKDAY, GETDATE())), Convert(DateTime, DATEDIFF(DAY, 0, GETDATE())) )
+		WHEN DATEPART(WEEKDAY, GETDATE()) = 1 
+			THEN DATEADD(DAY, -6 , Convert(DateTime, DATEDIFF(DAY, 0, GETDATE())) ) END,
+
+
+	Today11PM = DATEADD(Hour, 23, Convert(DateTime, DATEDIFF(DAY, 0, GETDATE()))),
+	BeginOfWeek11PmSunday = DATEADD(HOUR, 23, DATEADD(DAY, 1 - DATEPART(WEEKDAY, GETDATE()),Convert(DateTime, DATEDIFF(DAY, 0, GETDATE())) ) ),
+
+	-- Begininning the week on any time other than Sunday at midnight is complicated 
+	-- IF there's any possibility of running the query between Sunday Midnight and the start of the business week, you need to then go back 7 days instead of 1 day
+
+	ExampleOfTheComplication = DATEADD(DAY, 1 + (1 - DATEPART(WEEKDAY,  '8/28/22')),Convert(DateTime, DATEDIFF(DAY, 0, '8/28/22')) ),
+
+
+	ExampleOfHowCaseSolvesIt = CASE 
+		WHEN DATEPART(WEEKDAY, '8/28/22') <> 1 
+			THEN DATEADD(DAY, 1, DATEADD(DAY, 1 - DATEPART(WEEKDAY, '8/28/22'),Convert(DateTime, DATEDIFF(DAY, 0, '8/28/22')) ))
+		WHEN DATEPART(WEEKDAY, '8/28/22') = 1 
+			THEN DATEADD(DAY, -6 , Convert(DateTime, DATEDIFF(DAY, 0, '8/28/22')) ) END
+
+
+ 
+====================================
+= Date & Time - End
+====================================
+
+	
+
+=========================================
+= Insert, Delete, Update, & Merge - Begin
+=========================================
+	
+----
+It is possible to write the INSERT INTO statement in two forms.
+
+	---- The first form specifies both the column names and the values to be inserted, this should be systematically preferred because preserves the intention
+
+		INSERT INTO table_name (column1,column2,column3,...)
+		VALUES (value1,value2,value3,...);
+
+
+	--- The second form does not specify the column names where the data will be inserted, only their values:
+
+		INSERT INTO table_name
+		VALUES (value1,value2,value3,...);
+
+
+----
+SQL DELETE Syntax - delete rows in a table.
+
+DELETE FROM table_name
+ WHERE some_column=some_value;  
+  	
+**Warning! Be careful when deleting records. If you omit the WHERE clause ALL RECORDS will be changed
+** Be smart and write the query as a SELECT first to test your criteria, then beginning with the criteria first build the DELETE query
+
+		
+----
+SQL UPDATE Statement - http://www.w3schools.com/sql/sql_update.asp
+
+UPDATE table_name
+	SET column1=value1,
+		column2=value2,
+		...
+	WHERE some_column=some_value;
+
+**Warning! Be careful when updating records. If you omit the WHERE clause ALL RECORDS will be changed
+** Be smart and write the query as a SELECT first to test your criteria, then beginning with the criteria first build the UPDATE query
+
+
+
+----	
+SQL UPDATE - using a JOIN to set the value - https://blog.sqlauthority.com/2013/04/30/sql-server-update-from-select-statement-using-join-in-update-statement-multiple-tables-in-update-statement/
+
+UPDATE [table_name]
+	SET [table_name].[column1] = [table2].[value1]
+	FROM [table_name]
+		Join [table2] on [table_name].[some_column] = [table2].[matching_column]
+	WHERE some_column = some_value;
+
+	
+Example:
+  UPDATE [db07Reports].[dbo].[MekaMBEE]
+      SET [MekaMBEE].Treeweight =  mphtable.TreeWeight
+	  FROM [db07Reports].[dbo].[MekaMBEE]
+  JOIN @MPHtable as mphtable on MESPattern = [ActivePattern]
+	
+
+	
+----
+Self monitoring INSERTs
+
+insert into [dbSite7ShopFloor].[dbo].[DC_downtimeUptimeDCS]
+SELECT * 
+  FROM [FTPC_PROD_MIR].[dbo].[DC_downtimeUptimeDCS]
+where dc_instance_key > (SELECT TOP 1 dc_instance_key FROM [dbSite7ShopFloor].[dbo].[DC_downtimeUptimeDCS] order by dc_instance_key desc)
+
+
+----
+Pre-checking for key conflicts before a single record INSERT
+
+This example comes from a closed off data collection system that did not capture seconds, did not output keyed data, an had the potential for multiple records to occur within a minute
+
+	
+	---- high accuracy version	
+	-- this logic is desirable when every output must be kept
+	
+	DECLARE @controlledTimeStamp datetime
+
+	DECLARE @OccurenceCount tinyint
+	SET @OccurenceCount = ( SELECT Count(SampleTimeStamp) FROM dbo.UTData WHERE SampleTimeStamp >= @SampleTimeStamp AND SampleTimeStamp <= Dateadd(minute,1,@SampleTimeStamp) AND SourceID = @SourceID AND SampleOrigin = @SampleOrigin )			
+
+	IF (@OccurenceCount > 0 )
+		BEGIN 
+			-- @OccurenceCount guarantees that if there are up to 60 tests within the same minute for the same sample, that they will not have a key conflict, and will appear sequentially.		
+			SET @controlledTimeStamp = DATEADD(second,@OccurenceCount ,@SampleTimeStamp)
+		END
+	ELSE
+		BEGIN
+		 	SET @controlledTimeStamp = @SampleTimeStamp
+		END		
+		
+
+	
+	---- minimal accuracy version
+	-- this logic is for the situation where repeated outputs FOR THE SAME RESULT should be discarded. This query captured up to 3 tests within a minute before failing a record for key conflict
+	
+	IF EXISTS(SELECT NULL FROM dbo.UTData WHERE SampleTimeStamp = @SampleTimeStamp AND SourceID = @SourceID AND SampleOrigin = @SampleOrigin)
+		BEGIN 
+			DECLARE @SecondsModifier tinyint
+			SET @SecondsModifier = CASE WHEN @Results = 'ACCEPT' THEN 59 ELSE 1 END
+			-- @secondsModified guarantees that if there are 3 tests within the same minute for the same sample, that at least one REJECT and one ACCEPT will be recorded if they exist.
+			SET @controlledTimeStamp = DATEADD(second,@SecondsModifier,@SampleTimeStamp)
+		END
+	ELSE
+		BEGIN
+		 	SET @controlledTimeStamp = @SampleTimeStamp
+		END
+
+		
+		
+----
+Manually finding duplicate records (or eliminating Key conflicts before merging records from an old table)
+The HAVING clause is used to filter results after a GROUP BY 
+
+
+SELECT   SampleTimeStamp,
+         COUNT(SampleTimeStamp)
+FROM     [SampleDetail]
+GROUP BY SampleTimeStamp
+HAVING   Count(SampleTimeStamp) > 1
+
+
+----
+The EXCEPT operator is used to exclude like rows that are found in one query but not another.
+It returns rows that are unique to one result. Both queries must return the same number of columns and those columns must be of compatible data types.
+
+https://www.essentialsql.com/get-ready-to-learn-sqlserver-18-how-to-use-the-except-operator/
+(includes visual example)
+
+--		
+Example: find all job positions held by males but not female employees. 
+
+	SELECT JobTitle
+	FROM   HumanResources.Employee
+	WHERE  Gender = 'M'
+	EXCEPT
+	SELECT JobTitle
+	FROM   HumanResources.Employee
+	WHERE  Gender = 'F'
+
+--		
+The EXCEPT operator was just recently added to SQL Server.
+	Below is the equivalent statement to find job titles only held by Males:
+	SELECT DISTINCT M.JobTitle
+	FROM   HumanResources.Employee AS M
+	WHERE  M.Gender = 'M'
+		AND M.JobTitle NOT IN (SELECT F.JOBTITLE
+                              FROM   HumanResources.Employee AS F
+                              WHERE  F.Gender = 'F')
+
+----
+MERGE
+https://www.mssqltips.com/sqlservertip/1704/using-merge-in-sql-server-to-insert-update-and-delete-at-the-same-time/
+
+Conceptual example:
+
+	MERGE <target_table> [AS TARGET] USING <table_source> [AS SOURCE]
+		ON <search_condition>
+	[WHEN MATCHED THEN <merge_matched> ]
+	[WHEN NOT MATCHED [BY TARGET] THEN <merge_not_matched> ]
+	[WHEN NOT MATCHED BY SOURCE THEN <merge_matched> ]
+	;
+
+	Note: The MERGE SQL statement requires a semicolon (;) as a statement terminator.	
+
+Potential Benefit - the data is read and processed only once, and the action becomes a single statement instead of 3 different activities (INSERT, UPDATE or DELETE).
+Actual Benefit is situational, with modern systems being "about even performance". Use or avoid is more a matter of culture anything.
+https://www.mssqltips.com/sqlservertip/7590/sql-merge-performance-vs-insert-update-delete/
+
+	
+--
+Example:
+
+	--MERGE SQL statement - Part 2 Synchronize the target table with refreshed data from source table
+MERGE [Products] AS TargetTable
+	USING [UpdatedProducts] AS SOURCE 
+	ON (TargetTable.ProductID = SOURCE.ProductID) 
+
+	--When records are matched, update the records if there is any change
+WHEN MATCHED AND TargetTable.ProductName <> SOURCE.ProductName 
+	OR TargetTable.Rate <> SOURCE.Rate THEN 
+	UPDATE SET TargetTable.ProductName = SOURCE.ProductName, 
+	TargetTable.Rate = SOURCE.Rate 
+
+	--When no records are matched, insert the incoming records from source table to target table
+WHEN NOT MATCHED BY TargetTable THEN 
+	INSERT (ProductID, ProductName, Rate) 
+	VALUES (SOURCE.ProductID, SOURCE.ProductName, SOURCE.Rate)
+
+	--When there is a row that exists in target table and same record does not exist in source table then delete this record from target table
+WHEN NOT MATCHED BY SOURCE THEN 
+	DELETE
+
+	--$action specifies a column of type nvarchar(10) in the OUTPUT clause that returns one of three values for each row: 'INSERT', 'UPDATE', or 'DELETE', according to the action that was performed on that row
+OUTPUT $action, DELETED.ProductID AS TargetProductID, DELETED.ProductName AS TargetProductName, DELETED.Rate AS TargetRate, 
+	INSERTED.ProductID AS SourceProductID, INSERTED.ProductName AS SourceProductName, INSERTED.Rate AS SourceRate
+; 
+
+
+
+=======================================
+= Insert, Delete, Update, & Merge - End
+=======================================
+
+
+
+	
+====================================
+= Joins - Begin
+====================================
+
+--
+Types of Joins
+https://msdn.microsoft.com/en-us/library/zt8wzxy4.aspx
+
+		Inner join   A join that displays only the rows that have a match in both joined tables. (This is the default type of join in the Query and View Designer.) For example, you can join the titles and publishers tables to create a result set that shows the publisher name for each title. In an inner join, titles for which you do not have publisher information are not included in the result set, nor are publishers with no titles.
+		Outer join   A join that includes rows even if they do not have related rows in the joined table. You can create three variations of an outer join to specify the unmatched rows to be included: 
+			Left outer join    All rows from the first-named table (the "left" table, which appears leftmost in the JOIN clause) are included. Unmatched rows in the right table do not appear. 
+			Right outer join   All rows in the second-named table (the "right" table, which appears rightmost in the JOIN clause) are included. Unmatched rows in the left table are not included. 
+			Full outer join    All rows in all joined tables are included, whether they are matched or not. For example, a full outer join between titles and publishers shows all titles and all publishers, even those that have no match in the other table. 
+		Cross join   A join whose result set includes one row for each possible pairing of rows from the two tables. For example, authors CROSS JOIN publishers yields a result set with one row for each possible author/publisher combination. 		
+
+
+		
+--
+Subquery with multiple JOINs back to description table
+
+	DECLARE @tvar as table (munk int, funk int, clunk int);
+
+	insert into @tvar 
+	values (1, 2, 1);
+
+	SELECT s.munk, munky.description, munky.category,  s.funk, funky.description, funky.category, s.clunk, clunky.description, clunky.category from @tvar as s
+     
+	JOIN [dbShopFloor].[dbo].[MeltFurnaceStatusCodes] as munky on munk = munky.code and munky.category = 'FurnaceStep'
+
+	JOIN [dbShopFloor].[dbo].[MeltFurnaceStatusCodes] as funky on funk = funky.code and funky.category = 'ControlMode'
+
+	JOIN [dbShopFloor].[dbo].[MeltFurnaceStatusCodes] as clunky on clunk = clunky.code and clunky.category = 'TiltStatus'
+
+
+ -https://www.mssqltips.com/sqlservertip/3528/how-to-join-to-the-same-table-multiple-times-for-a-sql-server-query/
+
+
+--
+Nested Joins - using an intermediate table to join 3rd table
+
+
+SELECT TOP 1000 
+      [MesMovesToFinishedGoods].[BookmarkTimeStamp]
+      ,[MesMovesToFinishedGoods].[SapPlant]
+      ,[MesMovesToFinishedGoods].[WorkCenter]
+      ,[MesMovesToFinishedGoods].[ShiftDate]
+      ,[MesMovesToFinishedGoods].[ShiftID]
+      ,[MesMovesToFinishedGoods].[OperationName]
+      ,[[MesMovesToFinishedGoods].Part]
+      ,[MesMovesToFinishedGoods].[Quantity]
+      ,[MesMovesToFinishedGoods].[ContainerCount]
+      ,[MesMovesToFinishedGoods].[CreationHour]
+      ,[MesMovesToFinishedGoods].[StorageLocation]
+      ,[Part].[Partweight_F]
+      ,[Part].[cartQty_S]
+
+  FROM [dbPlant7Reports].[dbo].[MesMovesToFinishedGoods]
+
+  LEFT Join [dbo].[Part]
+ 	  Join [dbo].[UDA_Part] on [Part].[Part_key] = [UDA_Part].[object_key]
+	     on [MesMovesToFinishedGoods].[Part] = [Part_Number] 
+
+
+
+		 
+		 
+====================================
+= Joins - End
+====================================
+
+
+
+
+====================================
+= Table specific - Begin
+====================================
+----
+Identifying tables with high index fragmentation ( from quality works tech support )
+
+
+DECLARE @fragmentTreshold int
+
+  SET @fragmentTreshold = 75
+ 
+SELECT OBJECT_NAME(stat.object_id) AStableName, sys.indexes.name ASindexName, avg_fragmentation_in_percent
+
+  FROM sys.dm_db_index_physical_stats(DB_ID('QWX'),NULL, NULL, NULL , 'DETAILED') stat
+	
+  INNER JOIN sys.indexes ON stat.object_id = sys.indexes.object_id AND stat.index_id = sys.indexes.index_id
+    WHERE avg_fragmentation_in_percent >@fragmentTreshold AND stat.index_id <> 0
+    ORDER BY avg_fragmentation_in_percent DESC
+
+
+----
+Get the Creation, Modification, and Column Count stats for tables
+
+USE FTPC_DEV
+ select schema_name(schema_id) as schema_name,
+       name as table_name,
+       create_date,
+       modify_date,
+	   max_column_id_used
+from sys.tables
+where sys.tables.modify_date > DATEADD(DAY, -60, CURRENT_TIMESTAMP)
+order by modify_date desc;
+
+
+----
+Find the longest entry in a column
+
+	select top 1 [ExampleColumn]
+	from table
+	order by len([ExampleColumn]) desc
+
+
+----
+Get the "size" (row count) of a table 
+
+SELECT COUNT(*)
+  FROM [dbUltrasonicTesting].[dbo].[Tests]
+
+
+  
+----
+Remove records, but keep table structure
+
+Truncate Table [dbShopFloor].[dbo].[BaghouseAlarms]
+
+
+----
+Copy a table from one DB to another
+
+In SQL Server Management Studio you have Import and Export Wizard :
+
+    Right click on db name(DB_2)
+    Tasks
+    Import Data
+    Choose data source (DB_1)
+    Choose destination (DB_2)
+    Choose copy data from one or more tables
+    Choose your table (T1)
+    Finish
+
+or 
+	go to source database and select table to move.
+	Right click , Script Table As -> CREATE TO -> New Query Editor Window. 
+
+This opens query window with the SQL queries specifying schema , indexes , constraints on the table.
+You can change table name in CREATE TABLE section and make other changes...
+Change database name in first line USE <DATABASE> to Target database and execute the the query.
+
+
+---- 
+ADD Constraint... Primary Key
+  
+ALTER TABLE [dbo].[AlloyAddition] ADD Constraint pk_dcTimeStamp primary key (dcTimeStamp);
+GO
+
 
 
 
 ----
-Convert between mathematical Bases
-http://improve.dk/converting-between-base-2-10-and-16-in-t-sql/
+Data Types - When to use CHAR, VARCHAR, & NVARCHAR
 
+	1. Char vs Varchar - these are types that can store non unicode strings, and each character (or empty space) in variables of this types consumes 1 byte of memory. 
+		Difference is that varchar is variable length string and char is fixed length string. So when you declare variable of varchar(50) type and you store string "Test" in it it will actualy allocate only 4 bytes of memory. 
+		If you would do that in variable of type char(50) it will allocate 50 bytes of memory because it is fixed length string.
 
+		
+	2. Nchar vs Nvarchar - Same as above but it can store unicode char, so you can in one column have multiple languages and letters (latin, cyrilic, arab etc). 
+		Because it is unicode each char consumes 2 bytes of memory. Nchar is fixed length and nvarchar is variable length - same as above.
+
+When to use it in SQL Server ?
+
+	You should choose nvarchar or nchar (unicode support) if there is any possability that you will put unicode letters in that column, that is easy. 
+		Choice between fixed length strings and variable length strings in sql server can affect performanse in reading and writing. 
+		So if you expect many writes to columns (table) then better performance can be with fixed length strings because there will be less fragmentation and page splits. 
+		If you are expecting mostly reads from columns (table) then better is to use variable length strings because you will have to read less data from disk and disk IO will be lower.
+
+	
+	
 ====================================
-= Obscure Techniques -End
+= Table specific - End
 ====================================
 
+		
+====================================
+= Stored Procedures - Begin
+====================================
+	
+----
+Stored Procedure "First Run" - Execute and set permissions (the users listed are sample service and reporting accounts)
+
+Use db07ShopFLoor
+
+EXEC	[dbo].[spSandDataGetDetail]
+		@beginDateTime = N'5/31/2017 23:00:00',
+		@endDateTime = N'6/5/2017 23:00:00',
+		@LineID = '%'
+
+GO
+;
+
+GRANT EXECUTE ON OBJECT::[dbo].[spSandDataGetDetail]
+    TO [Domain\Svc_SQLQueryTask];  
+GO  
+
+GRANT EXECUTE ON OBJECT::[dbo].[spSandDataGetDetail]
+    TO [LogiReport];  
+GO  
+
+
+	
+
+--
+Query List of Stored Procedures
+
+SELECT
+  ROUTINE_CATALOG,
+  ROUTINE_SCHEMA,
+  ROUTINE_NAME,
+  CREATED,
+  LAST_ALTERED
+  FROM INFORMATION_SCHEMA.ROUTINES
+WHERE ROUTINE_TYPE = 'PROCEDURE'
+ and routine_name like 'example%'
+ 
+-- to see only ones changed in a specific time period 
+ and LAST_ALTERED > DATEADD(DAY, -60, CURRENT_TIMESTAMP)
+ 
+
+
+--
+Stored Procedure creation and usage
+
+
+	--- Stored Procedure "INSERT INTO" example
+
+	http://www.sqlinfo.net/sqlserver/sql_server_stored_procedure_INSERT.php
+
+
+
+	--- Stored Procedure - defaulting a parameter
+
+	https://technet.microsoft.com/en-us/library/ms189330(v=sql.105).aspx
+
+		CREATE PROCEDURE Sales.uspGetSalesYTD
+		@SalesPerson nvarchar(50) = NULL  -- NULL default value
+		AS 
+
+
+--
+Executing a stored procedure
+
+	--- With no parameters
+
+	EXECUTE [dbSite7Reports].[dbo].[spMergeIntoMekaTLSummary] 
+	GO
+
+
+
+	--- With parameters
+
+	USE [dbSite7Reports]
+	GO
+
+	DECLARE	@return_value int
+
+	EXEC	@return_value = [dbo].[spJobTransferToolMerge]
+		@dcTimeStamp = N'06/13/2016 08:12:35',
+		@BadgeNumber = 23882,
+		@JobID = N'50020',
+		@ShiftID = 1,
+		@ProcessingState = N'Entered',
+		@EnteredByUserID = N'manual',
+		@TransactionType = N'TR4'
+
+	SELECT	'Return Value' = @return_value
+
+	GO
+
+	**Note: @return_value can be used to track errors
+
+
+	
+
+----
+How to Share Data between Stored Procedures http://www.sommarskog.se/share_data.html
+
+	
+-- capturing the results of a Stored Procedure to a Table Variable
+DECLARE @tvar as table (...)
+INSERT INTO @tvar EXEC ...
+
+Example:
+	--- Dependency lookup of detail records using EXEC [dbPlant7Reports].[dbo].[spMekaDtCompiledSelect] ---
+	DECLARE @DTCompiledTVar as table (dtLine Int, dtFunctionalLocation varchar(50), dtBeginTime DateTime, dtEndTime DateTime, dtshift smallint, dtShiftDate Date, 
+												dtEventID Int, dtEventSubID Int, CompiledDtCode smallint, Comments varchar(300), 
+												dtSeconds int, dtAsMinutes decimal (5,2), dtHours decimal (5,2), dtAsTime Time, 
+												DowntimeText varchar(50), WaupacaDtCode Int, WaupacaDescription nchar(50), ShortTextForCode nchar(25), ShortText nchar(40));
+	Insert INTO @DTCompiledTVar
+
+	EXEC [dbPlant7Reports].[dbo].[spMekaDtCompiledSelect]
+			@BeginDateTime = @BeginDateTime, @EndDateTime = @EndDateTime, @LineID = @LineID, @activityType = @activityType, @shiftID = @shiftID, @downtimeCode = @downtimeCode
+	---------------------------------------------------------------------------------------------------------	
+	
+
+
+---- 
+OUTPUT parameters 
+https://docs.microsoft.com/en-us/sql/relational-databases/stored-procedures/return-data-from-a-stored-procedure
+
+--
+Stored Procedure with OUTPUT parameters example
+
+
+ALTER PROCEDURE [dbo].[spMesMekaRecipeLookup]
+	@EquipmentName			varchar(50),
+	@InoculantPourWeight	float Output,
+	@VDUpattern				smallint Output
+	
+AS
+BEGIN
+	SET NOCOUNT ON;
+	SELECT Top 1
+		EquipmentName = [object_name]
+		,InoculantPourWeight	= [tree_weight]
+		,VDUpattern				= Convert(smallint,left([plc_pattern],3))
+
+	INTO #temp1
+	FROM [10.108.64.86].[FTPC_PROD_MIR].[dbo].[DC_equipmentProperties]
+	Where @EquipmentName = [object_name]
+;
+Select @EquipmentName		= EquipmentName From #temp1
+Select @InoculantPourWeight = InoculantPourWeight From #temp1
+Select @VDUpattern			= VDUpattern From #temp1
+
+END
+
+
+---- 
+
+
+----
+Examples of Return codes 
+Value	Meaning
+0 	Successful execution. 
+1 	Required parameter value is not specified. 
+2 	Specified parameter value is not valid. 
+3 	Error has occurred getting [CaptainPlaceholder] value. 
+4 	NULL value found for field [CaptainPlaceholder] 
+
+
+
+----
+using PRINT to provide extra feedback
+	https://learn.microsoft.com/en-us/sql/t-sql/language-elements/print-transact-sql?view=sql-server-ver16
+  - Be aware that this returns in the "Message space" of the response from SQL, so it will be safely ignored by programs, but it also means that it is likely to be ignored by users
+
+-- Build the message text by concatenating strings and expressions.  
+PRINT N'This message was printed on '  
+    + RTRIM(CAST(GETDATE() AS NVARCHAR(30)))  
+    + N'.';  
+GO  
+
+
+----
+
+----
+number of rows as a parameter
+
+@rows int,
+...
+Select top (@rows)
+
+
+
+		
+====================================
+= Stored Procedures - End
+====================================
+	
 
 
 ====================================
@@ -562,5 +1340,153 @@ C:\Users\<you>\Documents\SQL Server Management Studio\Backup Files\
 ====================================
 
 
+====================================
+= References & links -Start
+====================================
+
+--
+smart coding practices
+ http://sqlblog.com/blogs/aaron_bertrand/archive/2008/10/30/my-stored-procedure-best-practices-checklist.aspx
 
 
+--
+Speeding up queries by eliminating SCANs
+
+Checklist for Analyzing Slow-Running Queries  		
+  https://technet.microsoft.com/en-us/library/ms177500(v=sql.105).aspx
+
+Examine the Execution plan, Look for the heavy hitters. 
+  https://technet.microsoft.com/en-us/library/ms178071(v=sql.105).aspx
+
+Identifying and Solving Index Scan Problems		
+  https://www.simple-talk.com/sql/performance/identifying-and-solving-index-scan-problems/
+
+More detail on understanding Index Scans		
+  https://www.mssqltips.com/sqlservertutorial/277/index-scans-and-table-scans/
+
+  https://www.red-gate.com/simple-talk/sql/performance/identifying-and-solving-index-scan-problems/
+
+
+
+--  
+Speeding up queries with proper parameterization
+
+Some queries were initially created with input parameters of varchar(19) that would later be cast as DateTime. They later began to show signs of significant delay with larger record selections.
+This same delay was not present when running in SSMS (1 seconds total run vs timed out query when run remotely). 
+A stack exchange comment pointed out that "parameter sniffing optimization" can create performance differences when run through ADO.NET  
+Changed date parameters in [spMekaMbeeBomSupplementTotal] to be genuine DateTime and problem disappered. 
+
+  - https://stackoverflow.com/questions/6585417/stored-procedure-slow-when-called-from-web-fast-from-management-studio
+  - https://blogs.technet.microsoft.com/mdegre/2011/11/06/what-is-parameter-sniffing/
+
+
+
+====================================
+= References & links -End
+====================================
+
+
+
+====================================
+= Obscure Techniques -Start
+====================================
+
+----
+OVER and PARTITION BY
+http://www.midnightdba.com/Jen/2010/10/tip-over-and-partition-by/
+
+OVER allows you to get aggregate information without using a GROUP BY. In other words, you can retrieve detail rows, and get aggregate data alongside it. For example, this query:
+
+SELECT SUM(Cost) OVER () AS Cost
+ , OrderNum
+ FROM Orders
+
+Quick translation:
+	•SUM(cost) – get me the sum of the COST column
+	•OVER – for the set of rows….
+	•() – …that encompasses the entire result set.	
+
+	
+OVER(PARTITION BY)
+
+OVER, as used in our previous example, exposes the entire resultset to the aggregation…”Cost” was the sum of all [Cost]  in the resultset.  We can break up that resultset into partitions with the use of PARTITION BY:
+
+SELECT SUM(Cost) OVER (PARTITION BY CustomerNo) AS Cost
+ , OrderNum
+ , CustomerNo
+ FROM Orders
+
+
+
+----
+Lead and Lag Functions in SQL Server 2012
+	SQL Server 2012 introduced LEAD analytic function to access the subsequent row (or columns from the subsequent row) without using self-join or CTE or ranking function.
+	LAG function allows accessing previous rows from the same result set, again without using self-join
+
+
+--
+how to fake Lead and Lag for T-SQL 2008
+http://www.databasejournal.com/features/mssql/lead-and-lag-functions-in-sql-server-2012.html
+
+You can use Common Table Expression (CTE) along with the ROW_NUMBER ranking function to access subsequent rows in the same result set. For example, for a given customer I want to know the expiration date for the current plan based on the activation date of the next plan. Basically, when a new plan is started the previous plan is automatically ended and hence the end date for a previous plan is the start date minus one day of the next plan:
+WITH CTE as 
+(        SELECT RN = ROW_NUMBER() OVER (PARTITION BY   CustomerCode ORDER BY   StartDate ASC),   * 
+        FROM @CustomerPlan)
+SELECT
+        [Current   Row].*, 
+        ISNULL(DATEADD(DAY, -1, [Next Row].StartDate), '31-Dec-2099') AS EndDate
+FROM   CTE [Current Row]
+        LEFT JOIN CTE [Next   Row] ON [Current Row].CustomerCode   = [Next Row].CustomerCode   AND  [Next Row].RN   = [Current Row].RN   + 1
+ORDER BY [Current Row].CustomerCode, [Current Row].RN;
+
+
+
+----
+Convert between mathematical Bases
+http://improve.dk/converting-between-base-2-10-and-16-in-t-sql/
+
+
+		
+----
+Regex - https://www.mssqltips.com/sqlservertutorial/9106/using-regular-expressions-with-tsql-from-beginner-to-advanced/
+
+{ In my experience, regex in SQL obviously works; and in a pinch this is how you use it. But needing it is a sign of a systemic design issue. }
+
+SELECT *
+FROM [example]
+WHERE [ExampleAlpha] LIKE '[A-Z][0-9][0-9][0-9]%'   	
+
+--
+Join dbShopFloor.dbo.PourLotStandard on [pour_lot_S] LIKE '[A-Z][0-9][0-9][0-9]%' and LEFT([pour_lot_S],1) = YearCode	
+
+
+---- 
+Sparse works; situationally
+Columns that contain multiple null values may benefit by being sparse. NULL entries in that column do not consume any bytes 
+But those columns are seen weirdly by some tools, and the presence of a lot of NULLs is probably a reflection of "interesting" design choices. Personally I would consider using this with a cold storage archive of old data, but not live stuff.
+
+
+
+----
+Add a comment ( "extendedProperty" ) to table elements. 
+(Nice idea in theory, but not helpful enough to be worth the maintanence effort. Good naming standards and project documentation have a better value in almost every situation. The example below is from vendor software.)
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Descriptive Text' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'BaghouseBPACSdata', @level2type=N'COLUMN',@level2name=N'RecordCounter'
+GO
+
+
+**Example: demonstrating addextendedproperty during table creation
+CREATE TABLE [dbo].[BaghouseBPACSdata]( [RecordCounter] [int] NULL, [RowID] [tinyint] NULL,	... ) ON [PRIMARY]
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'AutoSequence number generated during the transaction. BdcID + RecordCounter is unique (relative to counter reset)' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'BaghouseBPACSdata', @level2type=N'COLUMN',@level2name=N'RecordCounter'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Row is the descriptive location of the individual bags within a BDC' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'BaghouseBPACSdata', @level2type=N'COLUMN',@level2name=N'RowID'
+GO
+	
+
+
+====================================
+= Obscure Techniques -End
+====================================
