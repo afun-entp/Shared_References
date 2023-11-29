@@ -1,0 +1,52 @@
+A odd collection of very specific use cases
+
+
+
+----
+Cost of downtime (where 9999 is a placeholder representing the whole dollar cost of downtime per hour on a machine
+
+select Cast(Round( Cast(Round(((0.00 + 9999) / 3600) * [dtseconds], 2) as decimal (9,2)) ,2)  as decimal (9,2))
+
+
+----
+OEE - manually applying gating factor after record is created (Late communication from the shop floor regarding a molding pattern temporarily having half it's gates blocked off, so the records for that run had already been summarized.)
+
+UPDATE db07Reports.dbo.PouringOEE
+SET TotalCycles = (TotalCycles * .5),
+  GoodMolds = (GoodMolds * .5),
+  GoodPours = (GoodPours * .5),
+  Piecetotal = (Piecetotal * .5)
+WHERE (MekaTLStartTime > '8/15/2018 00:00') AND (ActivePattern = @PatternName)
+
+
+----
+ShiftDate and ShiftID Computed Columns for a plant that started their work week at 11PM on Sunday (But the time from 11 to midnight as part of the next "Shift Date".)
+
+-- ShiftID (Computed Column) 
+  (case when datepart(hour,[dctimestamp])<(7) OR datepart(hour,[dcTimeStamp])>(22) then (3) when datepart(hour,[dcTimeStamp])>=(7) AND datepart(hour,[dcTimeStamp])<=(14) then (1) else (2) end)
+
+-- ShiftDate (Computed Column)
+  (case when datepart(hour,[dcTimeStamp])>(22) then dateadd(day,(1),CONVERT([date],[dcTimeStamp],(0))) else CONVERT([date],[dcTimeStamp],(0)) end)
+ 
+
+-- ShiftID 7,3,& 11 schedule
+  (case when datepart(hour,[timestamp])<(7) OR datepart(hour,[TimeStamp])>(22) then (3) 
+							when datepart(hour,[TimeStamp])>=(7) AND datepart(hour,[TimeStamp])<=(14) then (1) 
+							else (2) end)
+
+-- ShiftDate 7,3,& 11 schedule						
+  (case when datepart(hour,[TimeStamp])>(22) then dateadd(day,(1),CONVERT([date],[TimeStamp],(0))) 
+							else CONVERT([date],[TimeStamp],(0)) end)
+
+
+--
+Same plant, switched to 2 10 hour shifts a day. 5 PM (then 2 hours of maintenance time) then 5 AM.
+							
+-- ShiftID 5 to 5 schedule							
+  (case when datepart(hour,[dcTimeStamp])>=(5) AND datepart(hour,[dcTimeStamp])<(17) then (1) else (2) end)
+
+-- ShiftDate 5 to 5 schedule
+  CONVERT([date],[dcTimeStamp],(0))
+ 
+ 
+
